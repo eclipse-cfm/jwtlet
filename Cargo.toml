@@ -30,7 +30,10 @@ dsdk-facet-core = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-
 dsdk-facet-postgres = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
 dsdk-facet-hashicorp-vault = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
 
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "json"] }
+
 jwtlet-core = { path = "crates/jwtlet-core" }
+jwtlet-postgres = { path = "crates/jwtlet-postgres" }
 jwtlet-service = { path = "crates/jwtlet-service" }
 
 anyhow = "1"

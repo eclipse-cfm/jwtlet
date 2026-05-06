@@ -1,0 +1,22 @@
+[package]
+name = "jwtlet-postgres"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+jwtlet-core = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+testcontainers = "0.26"
+testcontainers-modules = { version = "0.14", features = ["postgres"] }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
