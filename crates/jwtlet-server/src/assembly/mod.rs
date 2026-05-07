@@ -21,6 +21,7 @@ use jwtlet_core::resource::mem::MemoryResourceStore;
 use jwtlet_core::resource::{ResourceService, ResourceStore};
 use jwtlet_core::saccount::{MemoryServiceAccountStore, ServiceAccount, ServiceAccountAuthorizer};
 use jwtlet_core::token::TokenExchangeService;
+use jwtlet_postgres::PostgresResourceStore;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -63,6 +64,9 @@ pub enum JwtletError {
     #[error("Invalid configuration: {0}")]
     Configuration(String),
 
+    #[error("Database error: {0}")]
+    Database(String),
+
     #[error("Vault error: {0}")]
     Vault(Box<dyn std::error::Error + Send + Sync>),
 
@@ -95,13 +99,29 @@ pub async fn assemble_postgres(cfg: &JwtletConfig) -> Result<JwtletRuntime, Jwtl
             "storage_backend.url is required for postgres backend".to_string(),
         ));
     }
-    // TODO: replace with PostgresResourceStore once implemented
-    todo!("PostgresResourceStore is not yet implemented; use assemble_memory for now")
+
+    let store = connect_postgres(url).await?;
+    assemble(cfg, Arc::new(store)).await
 }
 
 // ============================================================================
 // Internal Assembly
 // ============================================================================
+
+/// Connects to Postgres and initializes the resource store schema.
+async fn connect_postgres(url: &str) -> Result<PostgresResourceStore, JwtletError> {
+    let pool = sqlx::PgPool::connect(url)
+        .await
+        .map_err(|e| JwtletError::Database(format!("Failed to connect to Postgres: {e}")))?;
+
+    let store = PostgresResourceStore::new(pool);
+    store
+        .initialize()
+        .await
+        .map_err(|e| JwtletError::Database(format!("Failed to initialize Postgres store: {e}")))?;
+
+    Ok(store)
+}
 
 async fn assemble(config: &JwtletConfig, store: Arc<dyn ResourceStore>) -> Result<JwtletRuntime, JwtletError> {
     // The signing key in Vault is named "{prefix}-{participant_context_claim}" — matching

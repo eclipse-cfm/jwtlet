@@ -1,0 +1,70 @@
+#  Copyright (c) 2026 Metaform Systems, Inc
+#  SPDX-License-Identifier: Apache-2.0
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: vault-e2e-test
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "jwtlet"
+        - name: POSTGRES_PASSWORD
+          value: "jwtlet"
+        - name: POSTGRES_DB
+          value: "jwtlet"
+        ports:
+        - name: postgres
+          containerPort: 5432
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "jwtlet", "-d", "jwtlet"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "jwtlet", "-d", "jwtlet"]
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: vault-e2e-test
+spec:
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: postgres
+    protocol: TCP
+  type: ClusterIP

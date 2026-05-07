@@ -2836,9 +2836,7 @@ dependencies = [
  "sqlx",
  "testcontainers",
  "testcontainers-modules",
- "thiserror 2.0.18",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -2854,10 +2852,12 @@ dependencies = [
  "dsdk-facet-hashicorp-vault",
  "dsdk-facet-postgres",
  "jwtlet-core",
+ "jwtlet-postgres",
  "reqwest",
  "rstest",
  "serde",
  "serde_json",
+ "sqlx",
  "thiserror 2.0.18",
  "tokio",
  "tokio-test",

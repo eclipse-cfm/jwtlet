@@ -37,14 +37,19 @@ pub const ENV_CONFIG_FILE: &str = "JWTLET_CONFIG_FILE";
 // Type Definitions
 // ============================================================================
 
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum StorageBackend {
-    #[default]
     Memory,
     Postgres {
         url: String,
     },
+}
+
+impl Default for StorageBackend {
+    fn default() -> Self {
+        StorageBackend::Memory
+    }
 }
 
 /// Configuration for the HashiCorp Vault signing backend.

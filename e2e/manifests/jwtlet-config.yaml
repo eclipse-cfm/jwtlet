@@ -9,7 +9,8 @@ metadata:
 data:
   jwtlet.toml: |
     [storage_backend]
-    type = "memory"
+    type = "postgres"
+    url  = "postgresql://jwtlet:jwtlet@postgres:5432/jwtlet"
 
     [k8s]
     api_server_url  = "https://kubernetes.default.svc"

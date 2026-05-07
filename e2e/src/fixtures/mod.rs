@@ -4,4 +4,5 @@
 //! Shared test fixtures — cluster state managed once per test process.
 
 pub mod jwtlet;
+pub mod postgres;
 pub mod vault;

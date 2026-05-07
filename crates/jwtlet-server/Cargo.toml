@@ -24,6 +24,8 @@ dsdk-facet-core = { workspace = true }
 dsdk-facet-postgres = { workspace = true }
 dsdk-facet-hashicorp-vault = { workspace = true }
 jwtlet-core = { workspace = true }
+jwtlet-postgres = { workspace = true }
+sqlx = { workspace = true }
 
 [dev-dependencies]
 rstest = { workspace = true }

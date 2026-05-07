@@ -31,6 +31,9 @@ pub async fn ensure_jwtlet_deployed() -> Result<Arc<JwtletDeployment>> {
         .get_or_try_init(|| async {
             crate::utils::verify_e2e_setup().await?;
 
+            // PostgreSQL must be running before Jwtlet starts (Postgres backend).
+            crate::fixtures::postgres::ensure_postgres_deployed().await?;
+
             for manifest in [
                 "manifests/jwtlet-config.yaml",
                 "manifests/jwtlet-deployment.yaml",

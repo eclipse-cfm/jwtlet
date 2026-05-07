@@ -51,6 +51,10 @@ echo "Configuring Vault..."
 echo "Applying Vault agent config..."
 kubectl apply -f "${E2E_DIR}/manifests/vault-agent-config.yaml"
 
+echo "Deploying PostgreSQL..."
+kubectl apply -f "${E2E_DIR}/manifests/postgres-deployment.yaml"
+kubectl wait --for=condition=Available deployment/postgres -n "$E2E_NAMESPACE" --timeout=120s
+
 echo "Building and loading jwtlet image..."
 "${E2E_DIR}/scripts/build-and-load-jwtlet.sh"
 
