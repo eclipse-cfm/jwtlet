@@ -9,6 +9,7 @@ anyhow = { workspace = true }
 axum = { workspace = true }
 async-trait = { workspace = true }
 config = { workspace = true }
+humantime-serde = { workspace = true }
 bon = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }

@@ -10,7 +10,7 @@
 //       Metaform Systems, Inc. - initial API and implementation
 //
 
-use crate::config::{JwtletConfig, K8sConfig, StorageBackend, VaultConfig};
+use crate::config::{JwtletConfig, K8sConfig, PostgresPoolConfig, StorageBackend, VaultConfig};
 use dsdk_facet_core::jwt::{
     JwkSetProvider, JwtGenerator, JwtVerifier, VaultJwtGenerator, VaultVerificationKeyResolver,
 };
@@ -22,8 +22,10 @@ use jwtlet_core::resource::{ResourceService, ResourceStore};
 use jwtlet_core::saccount::{MemoryServiceAccountStore, ServiceAccount, ServiceAccountAuthorizer};
 use jwtlet_core::token::TokenExchangeService;
 use jwtlet_postgres::PostgresResourceStore;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions, PgSslMode};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use thiserror::Error;
 use tracing::warn;
@@ -89,7 +91,7 @@ pub async fn assemble_memory(cfg: &JwtletConfig) -> Result<JwtletRuntime, Jwtlet
 
 /// Assembles the Jwtlet runtime using the Postgres-backed resource store.
 pub async fn assemble_postgres(cfg: &JwtletConfig) -> Result<JwtletRuntime, JwtletError> {
-    let StorageBackend::Postgres { url } = &cfg.storage_backend else {
+    let StorageBackend::Postgres { url, pool } = &cfg.storage_backend else {
         return Err(JwtletError::Configuration(
             "assemble_postgres called with non-postgres backend".to_string(),
         ));
@@ -100,7 +102,7 @@ pub async fn assemble_postgres(cfg: &JwtletConfig) -> Result<JwtletRuntime, Jwtl
         ));
     }
 
-    let store = connect_postgres(url).await?;
+    let store = connect_postgres(url, pool).await?;
     assemble(cfg, Arc::new(store)).await
 }
 
@@ -108,19 +110,87 @@ pub async fn assemble_postgres(cfg: &JwtletConfig) -> Result<JwtletRuntime, Jwtl
 // Internal Assembly
 // ============================================================================
 
-/// Connects to Postgres and initializes the resource store schema.
-async fn connect_postgres(url: &str) -> Result<PostgresResourceStore, JwtletError> {
-    let pool = sqlx::PgPool::connect(url)
+/// Connects to Postgres and (optionally) initializes the resource store schema.
+async fn connect_postgres(url: &str, pool_cfg: &PostgresPoolConfig) -> Result<PostgresResourceStore, JwtletError> {
+    let connect_options = build_connect_options(url, pool_cfg)?;
+    let pool_options = build_pool_options(pool_cfg);
+
+    let pool = pool_options
+        .connect_with(connect_options)
         .await
         .map_err(|e| JwtletError::Database(format!("Failed to connect to Postgres: {e}")))?;
 
     let store = PostgresResourceStore::new(pool);
-    store
-        .initialize()
-        .await
-        .map_err(|e| JwtletError::Database(format!("Failed to initialize Postgres store: {e}")))?;
+    if pool_cfg.run_migrations_on_startup.unwrap_or(true) {
+        store
+            .initialize()
+            .await
+            .map_err(|e| JwtletError::Database(format!("Failed to initialize Postgres store: {e}")))?;
+    }
 
     Ok(store)
+}
+
+fn build_connect_options(url: &str, pool_cfg: &PostgresPoolConfig) -> Result<PgConnectOptions, JwtletError> {
+    let mut opts = PgConnectOptions::from_str(url)
+        .map_err(|e| JwtletError::Configuration(format!("Invalid storage_backend.url: {e}")))?;
+
+    if let Some(name) = &pool_cfg.application_name {
+        opts = opts.application_name(name);
+    }
+
+    if let Some(mode) = &pool_cfg.sslmode {
+        let parsed = parse_ssl_mode(mode)?;
+        opts = opts.ssl_mode(parsed);
+    }
+
+    if let Some(path) = &pool_cfg.ssl_root_cert {
+        opts = opts.ssl_root_cert(path);
+    }
+
+    if let Some(cap) = pool_cfg.statement_cache_capacity {
+        opts = opts.statement_cache_capacity(cap);
+    }
+
+    Ok(opts)
+}
+
+fn build_pool_options(pool_cfg: &PostgresPoolConfig) -> PgPoolOptions {
+    let mut opts = PgPoolOptions::new();
+    if let Some(n) = pool_cfg.max_connections {
+        opts = opts.max_connections(n);
+    }
+    if let Some(n) = pool_cfg.min_connections {
+        opts = opts.min_connections(n);
+    }
+    if let Some(d) = pool_cfg.acquire_timeout {
+        opts = opts.acquire_timeout(d);
+    }
+    // sqlx treats `idle_timeout(None)` and `max_lifetime(None)` as "disable" — only
+    // forward when the user actually set a value, so an unset field keeps sqlx defaults.
+    if let Some(d) = pool_cfg.idle_timeout {
+        opts = opts.idle_timeout(Some(d));
+    }
+    if let Some(d) = pool_cfg.max_lifetime {
+        opts = opts.max_lifetime(Some(d));
+    }
+    if let Some(b) = pool_cfg.test_before_acquire {
+        opts = opts.test_before_acquire(b);
+    }
+    opts
+}
+
+fn parse_ssl_mode(mode: &str) -> Result<PgSslMode, JwtletError> {
+    match mode {
+        "disable" => Ok(PgSslMode::Disable),
+        "prefer" => Ok(PgSslMode::Prefer),
+        "require" => Ok(PgSslMode::Require),
+        "verify-ca" => Ok(PgSslMode::VerifyCa),
+        "verify-full" => Ok(PgSslMode::VerifyFull),
+        other => Err(JwtletError::Configuration(format!(
+            "Invalid storage_backend.pool.sslmode '{other}'"
+        ))),
+    }
 }
 
 async fn assemble(config: &JwtletConfig, store: Arc<dyn ResourceStore>) -> Result<JwtletRuntime, JwtletError> {

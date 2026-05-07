@@ -14,9 +14,10 @@
 
 use crate::config::{
     DEFAULT_BIND_ADDRESS, DEFAULT_MANAGEMENT_PORT, DEFAULT_PARTICIPANT_CONTEXT_CLAIM, DEFAULT_SA_TOKEN_FILE,
-    DEFAULT_TOKEN_EXCHANGE_PORT, DEFAULT_TOKEN_TTL_SECS, JwtletConfig, K8sConfig, StorageBackend, TokenConfig,
-    ValidationError, VaultConfig,
+    DEFAULT_TOKEN_EXCHANGE_PORT, DEFAULT_TOKEN_TTL_SECS, JwtletConfig, K8sConfig, PostgresPoolConfig, StorageBackend,
+    TokenConfig, ValidationError, VaultConfig,
 };
+use std::time::Duration;
 
 fn valid_config() -> JwtletConfig {
     JwtletConfig {
@@ -169,7 +170,10 @@ fn validate_fails_when_token_ttl_negative() {
 #[test]
 fn validate_fails_when_postgres_url_empty() {
     let mut cfg = valid_config();
-    cfg.storage_backend = StorageBackend::Postgres { url: String::new() };
+    cfg.storage_backend = StorageBackend::Postgres {
+        url: String::new(),
+        pool: PostgresPoolConfig::default(),
+    };
     assert_error_contains(&cfg, "storage_backend.url is required for Postgres backend");
 }
 
@@ -178,8 +182,145 @@ fn validate_accepts_postgres_with_url() {
     let mut cfg = valid_config();
     cfg.storage_backend = StorageBackend::Postgres {
         url: "postgres://localhost/jwtlet".to_string(),
+        pool: PostgresPoolConfig::default(),
     };
     assert!(cfg.validate().is_ok());
+}
+
+fn postgres_cfg_with_pool(pool: PostgresPoolConfig) -> JwtletConfig {
+    let mut cfg = valid_config();
+    cfg.storage_backend = StorageBackend::Postgres {
+        url: "postgres://localhost/jwtlet".to_string(),
+        pool,
+    };
+    cfg
+}
+
+#[test]
+fn validate_fails_when_pool_max_connections_zero() {
+    let cfg = postgres_cfg_with_pool(PostgresPoolConfig {
+        max_connections: Some(0),
+        ..Default::default()
+    });
+    assert_error_contains(&cfg, "max_connections must be > 0");
+}
+
+#[test]
+fn validate_fails_when_pool_min_exceeds_max() {
+    let cfg = postgres_cfg_with_pool(PostgresPoolConfig {
+        max_connections: Some(5),
+        min_connections: Some(10),
+        ..Default::default()
+    });
+    assert_error_contains(&cfg, "min_connections (10) cannot exceed max_connections (5)");
+}
+
+#[test]
+fn validate_fails_when_pool_acquire_timeout_zero() {
+    let cfg = postgres_cfg_with_pool(PostgresPoolConfig {
+        acquire_timeout: Some(Duration::from_secs(0)),
+        ..Default::default()
+    });
+    assert_error_contains(&cfg, "acquire_timeout must be > 0");
+}
+
+#[test]
+fn validate_fails_when_pool_sslmode_invalid() {
+    let cfg = postgres_cfg_with_pool(PostgresPoolConfig {
+        sslmode: Some("bogus".to_string()),
+        ..Default::default()
+    });
+    assert_error_contains(&cfg, "sslmode 'bogus' is invalid");
+}
+
+#[test]
+fn validate_accepts_valid_pool_config() {
+    let cfg = postgres_cfg_with_pool(PostgresPoolConfig {
+        max_connections: Some(20),
+        min_connections: Some(2),
+        acquire_timeout: Some(Duration::from_secs(15)),
+        idle_timeout: Some(Duration::from_secs(600)),
+        max_lifetime: Some(Duration::from_secs(1800)),
+        test_before_acquire: Some(true),
+        application_name: Some("jwtlet".to_string()),
+        statement_cache_capacity: Some(100),
+        sslmode: Some("require".to_string()),
+        ssl_root_cert: None,
+        run_migrations_on_startup: Some(true),
+    });
+    assert!(cfg.validate().is_ok());
+}
+
+#[test]
+fn pool_config_parses_humantime_durations() {
+    let toml = r#"
+        token_exchange_port = 8080
+        management_port = 8081
+
+        [storage_backend]
+        type = "postgres"
+        url  = "postgres://localhost/jwtlet"
+
+        [storage_backend.pool]
+        max_connections = 25
+        min_connections = 5
+        acquire_timeout = "15s"
+        idle_timeout = "10m"
+        max_lifetime = "1h"
+        application_name = "jwtlet"
+
+        [k8s]
+        api_server_url = "https://kubernetes.default.svc"
+        cluster_issuer = "https://kubernetes.default.svc.cluster.local"
+
+        [token]
+        client_audience = "https://kubernetes.default.svc.cluster.local"
+        audience = "my-aud"
+
+        [vault]
+        url = "https://vault.example.com:8200"
+        token = "root"
+    "#;
+
+    let cfg: JwtletConfig = config::Config::builder()
+        .add_source(config::File::from_str(toml, config::FileFormat::Toml))
+        .build()
+        .unwrap()
+        .try_deserialize()
+        .unwrap();
+
+    let StorageBackend::Postgres { pool, .. } = cfg.storage_backend else {
+        panic!("expected Postgres backend");
+    };
+    assert_eq!(pool.max_connections, Some(25));
+    assert_eq!(pool.min_connections, Some(5));
+    assert_eq!(pool.acquire_timeout, Some(Duration::from_secs(15)));
+    assert_eq!(pool.idle_timeout, Some(Duration::from_secs(600)));
+    assert_eq!(pool.max_lifetime, Some(Duration::from_secs(3600)));
+    assert_eq!(pool.application_name.as_deref(), Some("jwtlet"));
+}
+
+#[test]
+fn pool_config_defaults_when_block_omitted() {
+    let toml = r#"
+        [storage_backend]
+        type = "postgres"
+        url  = "postgres://localhost/jwtlet"
+    "#;
+
+    let cfg: JwtletConfig = config::Config::builder()
+        .add_source(config::File::from_str(toml, config::FileFormat::Toml))
+        .build()
+        .unwrap()
+        .try_deserialize()
+        .unwrap();
+
+    let StorageBackend::Postgres { pool, .. } = cfg.storage_backend else {
+        panic!("expected Postgres backend");
+    };
+    assert!(pool.max_connections.is_none());
+    assert!(pool.acquire_timeout.is_none());
+    assert!(pool.run_migrations_on_startup.is_none());
 }
 
 #[test]

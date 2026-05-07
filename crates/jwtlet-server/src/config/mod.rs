@@ -13,6 +13,7 @@
 use config::{Config, Environment, File};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::time::Duration;
 use std::{
     net::{IpAddr, Ipv4Addr},
     path::PathBuf,
@@ -33,6 +34,9 @@ pub const DEFAULT_PARTICIPANT_CONTEXT_CLAIM: &str = "jwtlet_pc";
 pub const DEFAULT_TOKEN_TTL_SECS: i64 = 3600;
 pub const ENV_CONFIG_FILE: &str = "JWTLET_CONFIG_FILE";
 
+/// Accepted values for `storage_backend.pool.sslmode`. Mirrors libpq / sqlx semantics.
+pub const VALID_SSL_MODES: &[&str] = &["disable", "prefer", "require", "verify-ca", "verify-full"];
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -43,6 +47,8 @@ pub enum StorageBackend {
     Memory,
     Postgres {
         url: String,
+        #[serde(default)]
+        pool: PostgresPoolConfig,
     },
 }
 
@@ -50,6 +56,41 @@ impl Default for StorageBackend {
     fn default() -> Self {
         StorageBackend::Memory
     }
+}
+
+/// Tuning knobs for the Postgres connection pool.
+///
+/// All fields are optional; unset fields fall back to sqlx defaults (or to a
+/// jwtlet default where noted). `Duration` fields accept human-readable strings
+/// such as `"30s"`, `"5m"`, or `"1h30m"`.
+#[derive(Deserialize, Clone, Debug, Default)]
+#[serde(default)]
+pub struct PostgresPoolConfig {
+    /// Maximum number of connections kept by the pool. sqlx default = 10.
+    pub max_connections: Option<u32>,
+    /// Minimum warm connections kept even when idle. sqlx default = 0.
+    pub min_connections: Option<u32>,
+    /// How long an `acquire()` waits for a free connection before erroring. sqlx default = 30s.
+    #[serde(with = "humantime_serde")]
+    pub acquire_timeout: Option<Duration>,
+    /// Drop idle connections older than this. sqlx default = 10m. `None` here keeps the sqlx default.
+    #[serde(with = "humantime_serde")]
+    pub idle_timeout: Option<Duration>,
+    /// Recycle connections older than this regardless of activity. sqlx default = 30m.
+    #[serde(with = "humantime_serde")]
+    pub max_lifetime: Option<Duration>,
+    /// Ping each connection before handing it out. sqlx default = true.
+    pub test_before_acquire: Option<bool>,
+    /// Value sent as `application_name` on each Postgres session.
+    pub application_name: Option<String>,
+    /// LRU capacity for the prepared-statement cache. Set to 0 behind transaction-mode PgBouncer.
+    pub statement_cache_capacity: Option<usize>,
+    /// One of `disable | prefer | require | verify-ca | verify-full`. Overrides any `?sslmode=` in the URL.
+    pub sslmode: Option<String>,
+    /// CA bundle used by `verify-ca` / `verify-full` modes.
+    pub ssl_root_cert: Option<PathBuf>,
+    /// Whether to run `PostgresResourceStore::initialize()` (DDL) on startup. Defaults to true when unset.
+    pub run_migrations_on_startup: Option<bool>,
 }
 
 /// Configuration for the HashiCorp Vault signing backend.
@@ -231,9 +272,40 @@ impl JwtletConfig {
         }
 
         // Postgres URL required when using that backend
-        if let StorageBackend::Postgres { url } = &self.storage_backend {
+        if let StorageBackend::Postgres { url, pool } = &self.storage_backend {
             if url.is_empty() {
                 errors.push("storage_backend.url is required for Postgres backend".to_string());
+            }
+
+            if let Some(0) = pool.max_connections {
+                errors.push("storage_backend.pool.max_connections must be > 0".to_string());
+            }
+            if let (Some(min), Some(max)) = (pool.min_connections, pool.max_connections)
+                && min > max
+            {
+                errors.push(format!(
+                    "storage_backend.pool.min_connections ({min}) cannot exceed max_connections ({max})"
+                ));
+            }
+            if let Some(d) = pool.acquire_timeout
+                && d.is_zero()
+            {
+                errors.push("storage_backend.pool.acquire_timeout must be > 0".to_string());
+            }
+            if let Some(mode) = &pool.sslmode
+                && !VALID_SSL_MODES.contains(&mode.as_str())
+            {
+                errors.push(format!(
+                    "storage_backend.pool.sslmode '{mode}' is invalid; expected one of {VALID_SSL_MODES:?}"
+                ));
+            }
+            if let Some(path) = &pool.ssl_root_cert
+                && !path.exists()
+            {
+                errors.push(format!(
+                    "storage_backend.pool.ssl_root_cert path does not exist: {}",
+                    path.display()
+                ));
             }
         }
 
