@@ -60,6 +60,14 @@ async fn test_token_exchange() -> anyhow::Result<()> {
         "scopes": ["read"],
         "audiences": [TOKEN_AUDIENCE]
     });
+    // delete mapping - fire and forget, in case it exists
+    client
+        .delete(format!(
+            "{mgmt_url}/api/v1/mappings/{client_identifier}/{PARTICIPANT_CONTEXT}"
+        ))
+        .bearer_auth(&mgmt_token)
+        .send()
+        .await?;
     let resp = client
         .post(format!("{mgmt_url}/api/v1/mappings"))
         .bearer_auth(&mgmt_token)
@@ -118,6 +126,15 @@ async fn test_token_exchange_with_scope_mapping() -> anyhow::Result<()> {
         "scopes": ["read","write"],
         "audiences": [TOKEN_AUDIENCE]
     });
+    // delete mapping - fire and forget, in case it exists
+    client
+        .delete(format!(
+            "{mgmt_url}/api/v1/mappings/{client_identifier}/{PARTICIPANT_CONTEXT}"
+        ))
+        .bearer_auth(&mgmt_token)
+        .send()
+        .await?;
+
     let resp = client
         .post(format!("{mgmt_url}/api/v1/mappings"))
         .bearer_auth(&mgmt_token)
@@ -139,7 +156,12 @@ async fn test_token_exchange_with_scope_mapping() -> anyhow::Result<()> {
         .json(&scope_mapping1)
         .send()
         .await?;
-    assert_eq!(resp2.status().as_u16(), 201, "create scope mapping failed: {}", resp.status());
+    assert_eq!(
+        resp2.status().as_u16(),
+        201,
+        "create scope mapping failed: {}",
+        resp.status()
+    );
 
     // register scope mapping: write -> some-api:write some-other-api:write
     let scope_mapping2 = json!({
@@ -154,7 +176,12 @@ async fn test_token_exchange_with_scope_mapping() -> anyhow::Result<()> {
         .json(&scope_mapping2)
         .send()
         .await?;
-    assert_eq!(resp3.status().as_u16(), 201, "create scope mapping failed: {}", resp.status());
+    assert_eq!(
+        resp3.status().as_u16(),
+        201,
+        "create scope mapping failed: {}",
+        resp.status()
+    );
 
     // Get a bounded SA token with the expected audience
     let sa_token = crate::utils::create_service_account_token(SA_NAME, namespace, CLIENT_AUDIENCE)?;
