@@ -138,10 +138,7 @@ fn extract_bearer_token(headers: &axum::http::HeaderMap) -> Option<&str> {
     headers
         .get(header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
-        .and_then(|v| {
-            let lower = v.to_ascii_lowercase();
-            lower.strip_prefix("bearer ").map(|_| &v["bearer ".len()..])
-        })
+        .and_then(|v| v.strip_prefix("Bearer ").or_else(|| v.strip_prefix("bearer ")))
 }
 
 async fn list_mappings(
@@ -213,9 +210,12 @@ async fn create_scope_mapping(
 async fn update_scope_mapping(
     State(service): State<Arc<ResourceService>>,
     Extension(actor): Extension<Actor>,
-    Path(_scope): Path<String>,
+    Path(scope): Path<String>,
     Json(mapping): Json<ScopeMapping>,
 ) -> Result<StatusCode, ManagementApiError> {
+    if scope != mapping.scope {
+        return Err(ManagementApiError::PathMismatch);
+    }
     service.update_scope_mapping(mapping.clone()).await?;
     info!(actor = %actor.0, scope = %mapping.scope, "scope mapping updated");
     Ok(StatusCode::NO_CONTENT)

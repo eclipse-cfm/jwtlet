@@ -42,7 +42,11 @@ spec:
           echo "Vault is ready"
       containers:
       - name: vault-agent
-        image: hashicorp/vault:1.15.0
+        image: hashicorp/vault:latest
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
         args:
         - agent
         - -config=/vault/config/agent.hcl
