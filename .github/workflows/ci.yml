@@ -48,9 +48,18 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Run e2e tests
+      - name: Prepare E2E test environment (KinD)
         working-directory: ./e2e
         run: |
           make setup
           make build
+
+      - name: Run e2e tests
+        working-directory: ./e2e
+        run: |
           make test
+
+      - name: Cleanup E2E environment
+        working-directory: ./e2e
+        run: |
+          make cleanup
