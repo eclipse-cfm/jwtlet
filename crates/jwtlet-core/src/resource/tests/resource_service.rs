@@ -153,7 +153,7 @@ async fn verify_returns_error_when_scopes_have_conflicting_claim_keys() {
         .unwrap();
 
     let mut read_claims = Map::new();
-    read_claims.insert("role".to_string(), Value::String("reader".to_string()));
+    read_claims.insert("role".to_string(), Value::Number(42.into()));
     service
         .save_scope_mapping(
             ScopeMapping::builder()
@@ -180,6 +180,48 @@ async fn verify_returns_error_when_scopes_have_conflicting_claim_keys() {
         .verify("client1", "ctx1", vec!["read".to_string(), "write".to_string()])
         .await;
     assert!(matches!(result, Err(ResourceError::ClaimConflict(_))));
+}
+
+#[tokio::test]
+async fn verify_returns_merged_claim_when_scopes_have_mergeable_claim_keys() {
+    let service = create_service();
+    service
+        .save(create_mapping("client1", "ctx1", &["read", "write"]))
+        .await
+        .unwrap();
+
+    let mut read_claims = Map::new();
+    read_claims.insert("role".to_string(), Value::String("reader".to_string()));
+    service
+        .save_scope_mapping(
+            ScopeMapping::builder()
+                .scope("read".to_string())
+                .claims(read_claims)
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    let mut write_claims = Map::new();
+    write_claims.insert("role".to_string(), Value::String("writer".to_string()));
+    service
+        .save_scope_mapping(
+            ScopeMapping::builder()
+                .scope("write".to_string())
+                .claims(write_claims)
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    let result = service
+        .verify("client1", "ctx1", vec!["read".to_string(), "write".to_string()])
+        .await;
+    assert!(result.is_ok());
+    let result = result.unwrap();
+    assert!(result.verified);
+    assert_eq!(result.claims["role"], Value::String("reader writer".to_string()));
+
 }
 
 #[tokio::test]

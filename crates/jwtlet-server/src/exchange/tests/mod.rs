@@ -217,6 +217,7 @@ fn mapping_store(m: ResourceMapping) -> StubStore {
         }))
     }))
 }
+
 fn mapping_store_with_scope(m: ResourceMapping, sm: HashMap<String, ScopeMapping>) -> StubStore {
     StubStore(Box::new(move || {
         Ok(Some(MappingPair {
@@ -225,7 +226,6 @@ fn mapping_store_with_scope(m: ResourceMapping, sm: HashMap<String, ScopeMapping
         }))
     }))
 }
-
 
 fn empty_store() -> StubStore {
     StubStore(Box::new(|| Ok(None)))

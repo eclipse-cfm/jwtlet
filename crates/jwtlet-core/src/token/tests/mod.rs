@@ -330,6 +330,43 @@ async fn exchange_token_returns_scope_conflict_when_scopes_share_claim_key() {
         None,
     )
     .await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn exchange_token_returns_scope_conflict_when_scopes_share_unmergeable_claim_key() {
+    let mut read_claims = serde_json::Map::new();
+    read_claims.insert("role".to_string(), Value::Number(42.into()));
+    let mut write_claims = serde_json::Map::new();
+    write_claims.insert("role".to_string(), Value::Bool(false));
+    let mut scope_mappings = HashMap::new();
+    scope_mappings.insert(
+        "read".to_string(),
+        ScopeMapping::builder()
+            .scope("read".to_string())
+            .claims(read_claims)
+            .build(),
+    );
+    scope_mappings.insert(
+        "write".to_string(),
+        ScopeMapping::builder()
+            .scope("write".to_string())
+            .claims(write_claims)
+            .build(),
+    );
+
+    let result = make_service(
+        ok_verifier(),
+        ok_generator(),
+        mapping_store_with_scopes(mapping(&["read", "write"]), scope_mappings),
+    )
+        .exchange_token(
+            PARTICIPANT_CONTEXT,
+            vec!["read".to_string(), "write".to_string()],
+            "input-token",
+            None,
+        )
+        .await;
     assert!(matches!(result, Err(ExchangeError::ScopeConflict(_))));
 }
 

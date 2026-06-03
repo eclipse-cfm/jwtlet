@@ -138,7 +138,10 @@ fn extract_bearer_token(headers: &axum::http::HeaderMap) -> Option<&str> {
     headers
         .get(header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer ").or_else(|| v.strip_prefix("bearer ")))
+        .and_then(|v| {
+            let lower = v.to_ascii_lowercase();
+            lower.strip_prefix("bearer ").map(|_| &v["bearer ".len()..])
+        })
 }
 
 async fn list_mappings(
