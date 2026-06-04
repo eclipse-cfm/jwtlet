@@ -139,12 +139,25 @@ impl ResourceService {
         for s in &scopes {
             if let Some(sm) = pair.scope_mappings.get(s) {
                 for (k, v) in &sm.claims {
-                    if claims.contains_key(k) {
-                        return Err(ResourceError::ClaimConflict(format!(
-                            "claim key '{k}' is defined by multiple requested scopes"
-                        )));
+                    match claims.get(k) {
+                        Some(Value::String(existing)) => {
+                            if let Value::String(new_val) = v {
+                                claims.insert(k.clone(), Value::String(format!("{existing} {new_val}")));
+                            } else {
+                                return Err(ResourceError::ClaimConflict(format!(
+                                    "claim key '{k}' has conflicting types across scopes"
+                                )));
+                            }
+                        }
+                        Some(_) => {
+                            return Err(ResourceError::ClaimConflict(format!(
+                                "claim key '{k}' is defined by multiple requested scopes"
+                            )));
+                        }
+                        None => {
+                            claims.insert(k.clone(), v.clone());
+                        }
                     }
-                    claims.insert(k.clone(), v.clone());
                 }
             }
         }

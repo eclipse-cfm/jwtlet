@@ -60,6 +60,14 @@ async fn test_token_exchange() -> anyhow::Result<()> {
         "scopes": ["read"],
         "audiences": [TOKEN_AUDIENCE]
     });
+    // delete mapping - fire and forget, in case it exists
+    client
+        .delete(format!(
+            "{mgmt_url}/api/v1/mappings/{client_identifier}/{PARTICIPANT_CONTEXT}"
+        ))
+        .bearer_auth(&mgmt_token)
+        .send()
+        .await?;
     let resp = client
         .post(format!("{mgmt_url}/api/v1/mappings"))
         .bearer_auth(&mgmt_token)
@@ -77,6 +85,113 @@ async fn test_token_exchange() -> anyhow::Result<()> {
         ("subject_token", sa_token.as_str()),
         ("resource", PARTICIPANT_CONTEXT),
         ("scope", "read"),
+        ("audience", TOKEN_AUDIENCE),
+    ];
+    let resp = client.post(format!("{token_url}/token")).form(&params).send().await?;
+
+    assert!(resp.status().is_success(), "token exchange failed: {}", resp.status());
+
+    let body: Value = resp.json().await?;
+    assert!(body["access_token"].is_string(), "missing access_token");
+    assert_eq!(body["token_type"].as_str(), Some("Bearer"));
+    assert_eq!(
+        body["issued_token_type"].as_str(),
+        Some("urn:ietf:params:oauth:token-type:jwt")
+    );
+    assert!(body["expires_in"].is_number(), "missing expires_in");
+
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg_attr(not(feature = "e2e"), ignore)]
+async fn test_token_exchange_with_scope_mapping() -> anyhow::Result<()> {
+    crate::utils::verify_e2e_setup().await?;
+
+    let jwtlet = ensure_jwtlet_deployed().await?;
+    let client = reqwest::Client::new();
+
+    let token_url = format!("http://127.0.0.1:{}", jwtlet.token_exchange_port);
+    let mgmt_url = format!("http://127.0.0.1:{}", jwtlet.management_port);
+    let namespace = crate::utils::E2E_NAMESPACE;
+    let client_identifier = format!("system:serviceaccount:{namespace}:{SA_NAME}");
+
+    // Get a management SA token for the management API caller
+    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, CLIENT_AUDIENCE)?;
+
+    // Register the SA -> participant context mapping with an audience allowlist
+    let resource_mapping = json!({
+        "clientIdentifier": client_identifier,
+        "participantContext": PARTICIPANT_CONTEXT,
+        "scopes": ["read","write"],
+        "audiences": [TOKEN_AUDIENCE]
+    });
+    // delete mapping - fire and forget, in case it exists
+    client
+        .delete(format!(
+            "{mgmt_url}/api/v1/mappings/{client_identifier}/{PARTICIPANT_CONTEXT}"
+        ))
+        .bearer_auth(&mgmt_token)
+        .send()
+        .await?;
+
+    let resp = client
+        .post(format!("{mgmt_url}/api/v1/mappings"))
+        .bearer_auth(&mgmt_token)
+        .json(&resource_mapping)
+        .send()
+        .await?;
+    assert_eq!(resp.status().as_u16(), 201, "create mapping failed: {}", resp.status());
+
+    // register scope mapping: read -> some-api:read some-other-api:read
+    let scope_mapping1 = json!({
+        "scope": "read",
+        "claims": {
+            "scope": "some-api:read some-other-api:read"
+        }
+    });
+    let resp2 = client
+        .post(format!("{mgmt_url}/api/v1/scopes"))
+        .bearer_auth(&mgmt_token)
+        .json(&scope_mapping1)
+        .send()
+        .await?;
+    assert_eq!(
+        resp2.status().as_u16(),
+        201,
+        "create scope mapping failed: {}",
+        resp.status()
+    );
+
+    // register scope mapping: write -> some-api:write some-other-api:write
+    let scope_mapping2 = json!({
+        "scope": "write",
+        "claims": {
+            "scope": "some-api:write some-other-api:write"
+        }
+    });
+    let resp3 = client
+        .post(format!("{mgmt_url}/api/v1/scopes"))
+        .bearer_auth(&mgmt_token)
+        .json(&scope_mapping2)
+        .send()
+        .await?;
+    assert_eq!(
+        resp3.status().as_u16(),
+        201,
+        "create scope mapping failed: {}",
+        resp.status()
+    );
+
+    // Get a bounded SA token with the expected audience
+    let sa_token = crate::utils::create_service_account_token(SA_NAME, namespace, CLIENT_AUDIENCE)?;
+
+    // POST /token (RFC 8693 token exchange) — explicitly request the allowed audience
+    let params = [
+        ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
+        ("subject_token", sa_token.as_str()),
+        ("resource", PARTICIPANT_CONTEXT),
+        ("scope", "read write"),
         ("audience", TOKEN_AUDIENCE),
     ];
     let resp = client.post(format!("{token_url}/token")).form(&params).send().await?;

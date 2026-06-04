@@ -24,6 +24,7 @@ use jwtlet_core::resource::{
     MappingPair, ResourceError, ResourceMapping, ResourceService, ResourceStore, ScopeMapping,
 };
 use jwtlet_core::token::TokenExchangeService;
+use serde_json::{Map, json};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -113,6 +114,40 @@ async fn exchange_token_parses_scope_as_space_separated_list() {
 }
 
 #[tokio::test]
+async fn exchange_token_parses_scope_as_space_separated_list_with_scope_mappings() {
+    let mut scope_mappings = HashMap::new();
+    scope_mappings.insert(
+        "read".to_string(),
+        ScopeMapping::builder()
+            .scope("read".to_string())
+            .claims(Map::from_iter([(
+                "scope".to_string(),
+                json!("some-api:read some-other-api:read"),
+            )]))
+            .build(),
+    );
+    scope_mappings.insert(
+        "write".to_string(),
+        ScopeMapping::builder()
+            .scope("write".to_string())
+            .claims(Map::from_iter([(
+                "scope".to_string(),
+                json!("some-api:write some-other-api:write"),
+            )]))
+            .build(),
+    );
+    let service = make_service(
+        ok_verifier(),
+        ok_generator(),
+        mapping_store_with_scope(mapping(&["read", "write"]), scope_mappings),
+    );
+    let response = token_exchange(State(Arc::new(service)), Form(form(Some("read write"))))
+        .await
+        .into_response();
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
 async fn exchange_token_passes_empty_scopes_when_scope_absent() {
     let service = make_service(ok_verifier(), ok_generator(), mapping_store(mapping(&[])));
     let response = token_exchange(State(Arc::new(service)), Form(form(None)))
@@ -178,7 +213,16 @@ fn mapping_store(m: ResourceMapping) -> StubStore {
     StubStore(Box::new(move || {
         Ok(Some(MappingPair {
             resource_mapping: m.clone(),
-            scope_mappings: std::collections::HashMap::new(),
+            scope_mappings: HashMap::new(),
+        }))
+    }))
+}
+
+fn mapping_store_with_scope(m: ResourceMapping, sm: HashMap<String, ScopeMapping>) -> StubStore {
+    StubStore(Box::new(move || {
+        Ok(Some(MappingPair {
+            resource_mapping: m.clone(),
+            scope_mappings: sm.clone(),
         }))
     }))
 }
@@ -303,10 +347,10 @@ async fn exchange_token_returns_no_error_description_on_token_verification_failu
 
 #[tokio::test]
 async fn exchange_token_returns_400_for_scope_claim_conflict() {
-    let mut read_claims = serde_json::Map::new();
-    read_claims.insert("role".to_string(), serde_json::Value::String("reader".to_string()));
-    let mut write_claims = serde_json::Map::new();
-    write_claims.insert("role".to_string(), serde_json::Value::String("writer".to_string()));
+    let mut read_claims = Map::new();
+    read_claims.insert("role".to_string(), json!({"readOnly": true, "description": "reader description"}));
+    let mut write_claims = Map::new();
+    write_claims.insert("role".to_string(), json!({"readOnly": false, "description": "writer description"}));
     let mut scope_mappings = HashMap::new();
     scope_mappings.insert(
         "read".to_string(),

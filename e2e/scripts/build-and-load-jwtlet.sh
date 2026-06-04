@@ -16,6 +16,19 @@ if ! kind get clusters 2>/dev/null | grep -q "^${KIND_CLUSTER_NAME}$"; then
   exec "${SCRIPT_DIR}/setup.sh"
 fi
 
+detect_platform() {
+  local arch
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64)       echo "linux/amd64" ;;
+    aarch64|arm64) echo "linux/arm64" ;;
+    *)
+      echo "Warning: Unknown architecture '$arch', defaulting to linux/amd64" >&2
+      echo "linux/amd64"
+      ;;
+  esac
+}
+
 wait_for_jwtlet() {
   echo "Waiting for jwtlet to be ready (up to 300s)..."
   local deadline=$(( $(date +%s) + 300 ))
@@ -48,9 +61,11 @@ wait_for_jwtlet() {
   done
 }
 
-echo "Building jwtlet image..."
+PLATFORM="$(detect_platform)"
+
+echo "Building jwtlet image for platform: $PLATFORM..."
 DOCKER_BUILDKIT=1 docker build \
-  --platform linux/amd64 \
+  --platform "$PLATFORM" \
   --build-arg "CACHE_INVALIDATE=$(date +%s)" \
   -f "${WORKSPACE_ROOT}/crates/jwtlet-server/Dockerfile.test" \
   -t jwtlet:local \

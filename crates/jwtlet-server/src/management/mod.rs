@@ -213,9 +213,12 @@ async fn create_scope_mapping(
 async fn update_scope_mapping(
     State(service): State<Arc<ResourceService>>,
     Extension(actor): Extension<Actor>,
-    Path(_scope): Path<String>,
+    Path(scope): Path<String>,
     Json(mapping): Json<ScopeMapping>,
 ) -> Result<StatusCode, ManagementApiError> {
+    if scope != mapping.scope {
+        return Err(ManagementApiError::PathMismatch);
+    }
     service.update_scope_mapping(mapping.clone()).await?;
     info!(actor = %actor.0, scope = %mapping.scope, "scope mapping updated");
     Ok(StatusCode::NO_CONTENT)
