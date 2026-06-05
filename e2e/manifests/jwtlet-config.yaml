@@ -8,6 +8,8 @@ metadata:
   namespace: vault-e2e-test
 data:
   jwtlet.toml: |
+    issuer = "http://jwtlet.vault-e2e-test.svc.cluster.local"
+
     [storage_backend]
     type = "postgres"
     url  = "postgresql://jwtlet:jwtlet@postgres:5432/jwtlet"
