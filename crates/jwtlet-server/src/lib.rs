@@ -14,4 +14,5 @@ pub mod assembly;
 pub mod config;
 pub mod exchange;
 pub mod management;
+pub mod meta;
 pub mod server;

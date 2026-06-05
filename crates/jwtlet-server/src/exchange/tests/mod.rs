@@ -179,6 +179,7 @@ fn make_service(verifier: StubVerifier, generator: StubGenerator, store: StubSto
     TokenExchangeService::builder()
         .client_audience(CLIENT_AUDIENCE)
         .audience(TOKEN_AUDIENCE)
+        .issuer("https://jwtlet.example.com")
         .verifier(Box::new(verifier))
         .generator(Box::new(generator))
         .resource_service(

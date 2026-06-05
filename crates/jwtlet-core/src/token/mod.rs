@@ -28,6 +28,8 @@ pub struct TokenExchangeService {
     client_audience: String,
     #[builder(into)]
     audience: String,
+    #[builder(into)]
+    issuer: String,
     #[builder(into, default = "jwtlet_pc")]
     jwtlet_participant_context: String,
     #[builder(default = 3600)]
@@ -81,6 +83,7 @@ impl TokenExchangeService {
         let now = Utc::now().timestamp();
         let participant_claims = TokenClaims::builder()
             .sub(participant_context)
+            .iss(self.issuer.as_str())
             .aud(aud.as_str())
             .iat(now)
             .nbf(now)
