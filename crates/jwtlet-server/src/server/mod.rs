@@ -13,6 +13,7 @@
 use crate::config::JwtletConfig;
 use crate::exchange::{get_swk_set, token_exchange};
 use crate::management::{ManagementState, management_routes};
+use crate::meta::{AuthorizationServerMetadata, get_authorization_server_metadata};
 use axum::{
     Router,
     extract::FromRef,
@@ -36,6 +37,7 @@ use tracing::{error, info};
 struct ExchangeApiState {
     token_service: Arc<TokenExchangeService>,
     key_resolver: Arc<dyn JwkSetProvider>,
+    metadata: Arc<AuthorizationServerMetadata>,
 }
 
 #[derive(Debug, Error)]
@@ -52,6 +54,7 @@ pub async fn run_server(
     service_account_authorizer: Arc<dyn ServiceAccountAuthorizer>,
     management_verifier: Arc<dyn JwtVerifier>,
     management_client_audience: String,
+    metadata: Arc<AuthorizationServerMetadata>,
 ) -> Result<(), ServerError> {
     let cancel_token = CancellationToken::new();
     let mut join_set: JoinSet<Result<(), ServerError>> = JoinSet::new();
@@ -61,6 +64,7 @@ pub async fn run_server(
         config.token_exchange_port,
         token_service,
         key_resolver,
+        metadata,
         cancel_token.clone(),
     ));
 
@@ -101,6 +105,7 @@ async fn run_token_exchange_api(
     port: u16,
     service: Arc<TokenExchangeService>,
     key_resolver: Arc<dyn JwkSetProvider>,
+    metadata: Arc<AuthorizationServerMetadata>,
     cancel: CancellationToken,
 ) -> Result<(), ServerError> {
     let addr = format!("{bind}:{port}");
@@ -110,11 +115,16 @@ async fn run_token_exchange_api(
     let state = ExchangeApiState {
         token_service: service,
         key_resolver,
+        metadata,
     };
     let app = Router::new()
         .route("/health", get(health))
         .route("/token", post(token_exchange))
         .route("/.well-known/jwks.json", get(get_swk_set))
+        .route(
+            "/.well-known/oauth-authorization-server",
+            get(get_authorization_server_metadata),
+        )
         .with_state(state)
         .layer(TraceLayer::new_for_http());
 

@@ -24,6 +24,7 @@ fn valid_config() -> JwtletConfig {
         token_exchange_port: 8080,
         management_port: 8081,
         bind: DEFAULT_BIND_ADDRESS,
+        issuer: Some("https://jwtlet.example.com".to_string()),
         storage_backend: StorageBackend::Memory,
         k8s: K8sConfig {
             api_server_url: Some("https://kubernetes.default.svc".to_string()),
@@ -80,6 +81,20 @@ fn vault_token_file_accepted_instead_of_literal_token() {
     cfg.vault.token = None;
     cfg.vault.token_file = Some("/vault/secrets/.vault-token".to_string());
     assert!(cfg.validate().is_ok());
+}
+
+#[test]
+fn validate_fails_when_issuer_missing() {
+    let mut cfg = valid_config();
+    cfg.issuer = None;
+    assert_error_contains(&cfg, "issuer is required");
+}
+
+#[test]
+fn validate_fails_when_issuer_invalid() {
+    let mut cfg = valid_config();
+    cfg.issuer = Some("not-a-url".to_string());
+    assert_error_contains(&cfg, "issuer is not a valid URL");
 }
 
 #[test]
@@ -355,6 +370,7 @@ fn validate_collects_all_errors_before_returning() {
         err.error_count()
     );
     let msgs = err.messages();
+    assert!(msgs.iter().any(|m| m.contains("issuer")));
     assert!(msgs.iter().any(|m| m.contains("vault.url")));
     assert!(msgs.iter().any(|m| m.contains("k8s.api_server_url")));
     assert!(msgs.iter().any(|m| m.contains("token.client_audience")));

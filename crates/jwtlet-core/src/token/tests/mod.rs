@@ -27,6 +27,7 @@ const ALT_AUDIENCE: &str = "https://other-service.example.com";
 const PARTICIPANT_CONTEXT: &str = "test-context";
 const CLIENT_SUB: &str = "system:serviceaccount:default:test-sa";
 const CLIENT_ISS: &str = "https://kubernetes.default.svc";
+const JWTLET_ISSUER: &str = "https://jwtlet.example.com";
 
 // ============================================================================
 // Existing exchange_token tests (audience = None — unchanged behaviour)
@@ -280,6 +281,22 @@ async fn exchange_token_allows_any_audience_from_multi_entry_allowlist() {
 }
 
 #[tokio::test]
+async fn exchange_token_issued_token_includes_iss_claim() {
+    let sink = Arc::new(Mutex::new(None));
+    make_service(
+        ok_verifier(),
+        capturing_generator(Arc::clone(&sink)),
+        mapping_store(mapping(&["read"])),
+    )
+    .exchange_token(PARTICIPANT_CONTEXT, vec!["read".to_string()], "input-token", None)
+    .await
+    .unwrap();
+
+    let claims = sink.lock().unwrap().take().unwrap();
+    assert_eq!(claims.iss, JWTLET_ISSUER);
+}
+
+#[tokio::test]
 async fn exchange_token_issued_token_includes_iat_and_nbf() {
     let sink = Arc::new(Mutex::new(None));
     make_service(
@@ -527,6 +544,7 @@ fn make_service(verifier: StubVerifier, generator: StubGenerator, store: StubSto
     TokenExchangeService::builder()
         .client_audience(CLIENT_AUDIENCE)
         .audience(TOKEN_AUDIENCE)
+        .issuer(JWTLET_ISSUER)
         .verifier(Box::new(verifier))
         .generator(Box::new(generator))
         .resource_service(

@@ -58,6 +58,7 @@ async fn run(config: JwtletConfig) -> anyhow::Result<()> {
         runtime.service_account_authorizer,
         runtime.management_verifier,
         runtime.management_client_audience,
+        runtime.metadata,
     )
     .await
     .map_err(Into::into)

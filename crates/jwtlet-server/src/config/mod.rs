@@ -185,6 +185,10 @@ pub struct JwtletConfig {
     pub management_port: u16,
     #[serde(default = "default_bind")]
     pub bind: IpAddr,
+    /// The canonical URL of this server (e.g. `https://jwtlet.example.com`).
+    /// Used as the `iss` claim in issued tokens and as the base URL in the
+    /// RFC 8414 authorization server metadata document.
+    pub issuer: Option<String>,
     #[serde(default)]
     pub storage_backend: StorageBackend,
     #[serde(default)]
@@ -205,6 +209,7 @@ impl Default for JwtletConfig {
             token_exchange_port: DEFAULT_TOKEN_EXCHANGE_PORT,
             management_port: DEFAULT_MANAGEMENT_PORT,
             bind: DEFAULT_BIND_ADDRESS,
+            issuer: None,
             storage_backend: StorageBackend::Memory,
             k8s: K8sConfig::default(),
             token: TokenConfig::default(),
@@ -221,6 +226,15 @@ impl JwtletConfig {
     /// Call immediately after loading to fail fast before starting any services.
     pub fn validate(&self) -> Result<(), ValidationError> {
         let mut errors = Vec::new();
+
+        // Issuer
+        match &self.issuer {
+            None => errors.push("issuer is required".to_string()),
+            Some(url) if url.parse::<reqwest::Url>().is_err() => {
+                errors.push(format!("issuer is not a valid URL: '{url}'"));
+            }
+            _ => {}
+        }
 
         // Vault configuration
         match &self.vault.url {

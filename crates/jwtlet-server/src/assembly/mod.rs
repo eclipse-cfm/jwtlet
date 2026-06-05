@@ -11,6 +11,7 @@
 //
 
 use crate::config::{JwtletConfig, K8sConfig, PostgresPoolConfig, StorageBackend, VaultConfig};
+use crate::meta::AuthorizationServerMetadata;
 use dsdk_facet_core::jwt::{
     JwkSetProvider, JwtGenerator, JwtVerifier, VaultJwtGenerator, VaultVerificationKeyResolver,
 };
@@ -55,6 +56,8 @@ pub struct JwtletRuntime {
     pub management_verifier: Arc<dyn JwtVerifier>,
     /// Audience used when verifying management Bearer tokens via K8s TokenReview.
     pub management_client_audience: String,
+    /// RFC 8414 authorization server metadata document.
+    pub metadata: Arc<AuthorizationServerMetadata>,
 }
 
 // ============================================================================
@@ -217,11 +220,16 @@ async fn assemble(config: &JwtletConfig, store: Arc<dyn ResourceStore>) -> Resul
         .audience
         .clone()
         .ok_or_else(|| JwtletError::Configuration("token.audience is required".to_string()))?;
+    let issuer = config
+        .issuer
+        .clone()
+        .ok_or_else(|| JwtletError::Configuration("issuer is required".to_string()))?;
 
     let token_service = Arc::new(
         TokenExchangeService::builder()
             .client_audience(client_audience.clone())
             .audience(audience)
+            .issuer(issuer.clone())
             .jwtlet_participant_context(config.token.participant_context_claim.clone())
             .token_ttl_secs(config.token.token_ttl_secs)
             .verifier(Box::new(create_k8s_verifier(&config.k8s).await?))
@@ -255,6 +263,7 @@ async fn assemble(config: &JwtletConfig, store: Arc<dyn ResourceStore>) -> Resul
         service_account_authorizer,
         management_verifier,
         management_client_audience,
+        metadata: Arc::new(AuthorizationServerMetadata::new(issuer)),
     })
 }
 
