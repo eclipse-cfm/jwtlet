@@ -30,8 +30,11 @@ use tokio::net::TcpListener;
 use tokio::select;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
+use opentelemetry::global;
+use opentelemetry_http::HeaderExtractor;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[derive(Clone, FromRef)]
 struct ExchangeApiState {
@@ -126,7 +129,7 @@ async fn run_token_exchange_api(
             get(get_authorization_server_metadata),
         )
         .with_state(state)
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http().make_span_with(make_http_span));
 
     axum::serve(listener, app)
         .with_graceful_shutdown(cancel.cancelled_owned())
@@ -148,7 +151,7 @@ async fn run_management_api(
     let app = Router::new()
         .route("/health", get(health))
         .nest("/api/v1", management_routes(state))
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http().make_span_with(make_http_span));
 
     axum::serve(listener, app)
         .with_graceful_shutdown(cancel.cancelled_owned())
@@ -159,6 +162,25 @@ async fn run_management_api(
 
 async fn health() -> &'static str {
     "OK"
+}
+
+/// Builds the per-request span, continuing the caller's trace by extracting the W3C trace context
+/// (`traceparent`/`tracestate`) from the inbound request headers, so jwtlet's spans become children
+/// of the calling service's span rather than starting a new trace.
+fn make_http_span(request: &axum::extract::Request) -> tracing::Span {
+    let parent_cx = global::get_text_map_propagator(|propagator| {
+        propagator.extract(&HeaderExtractor(request.headers()))
+    });
+    let span = tracing::info_span!(
+        "http_request",
+        otel.kind = "server",
+        otel.name = %format!("{} {}", request.method(), request.uri().path()),
+        http.request.method = %request.method(),
+        url.path = %request.uri().path(),
+    );
+    // best-effort: a missing/invalid traceparent simply yields no parent
+    let _ = span.set_parent(parent_cx);
+    span
 }
 
 fn handle_task_result(result: Result<Result<(), ServerError>, tokio::task::JoinError>) {
