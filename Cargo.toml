@@ -26,6 +26,13 @@ axum = { version = "0.8", features = ["macros"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace"] }
 
+# OpenTelemetry: distributed tracing + W3C context propagation over HTTP, exported via OTLP/HTTP
+opentelemetry = "0.32"
+opentelemetry_sdk = "0.32"
+opentelemetry-otlp = { version = "0.32", default-features = false, features = ["trace", "http-proto", "reqwest-blocking-client"] }
+opentelemetry-http = "0.32"
+tracing-opentelemetry = "0.33"
+
 dsdk-facet-core = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
 dsdk-facet-postgres = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
 dsdk-facet-hashicorp-vault = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }

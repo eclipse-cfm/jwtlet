@@ -16,32 +16,29 @@ use jwtlet_server::{
     server::run_server,
 };
 use tracing::{error, info};
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    let tracer_provider = jwtlet_server::telemetry::init();
 
-    let config = load_config().unwrap_or_else(|e| {
-        error!("Failed to load configuration: {e}");
-        std::process::exit(1);
-    });
+    let result = run_jwtlet().await;
 
-    if let Err(e) = config.validate() {
-        error!("{e}");
-        std::process::exit(1);
-    }
+    // flush any buffered spans before the process exits
+    jwtlet_server::telemetry::shutdown(tracer_provider);
 
-    match run(config).await {
+    match result {
         Ok(()) => info!("Shutdown complete"),
         Err(e) => {
             error!("Fatal error: {e}");
             std::process::exit(1);
         }
     }
+}
+
+async fn run_jwtlet() -> anyhow::Result<()> {
+    let config = load_config().map_err(|e| anyhow::anyhow!("Failed to load configuration: {e}"))?;
+    config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
+    run(config).await
 }
 
 async fn run(config: JwtletConfig) -> anyhow::Result<()> {
