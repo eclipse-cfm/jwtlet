@@ -421,6 +421,91 @@ async fn create_scope_with_non_reserved_claims_returns_201() {
 }
 
 // ============================================================================
+// POST /scopes accepts either a single ScopeMapping or an array of them
+// ============================================================================
+
+#[tokio::test]
+async fn create_scope_mapping_accepts_array_returns_201() {
+    let router = make_router();
+    let body = json!([scope_mapping_json("read"), scope_mapping_json("write")]);
+    let response = post_scope(&router, body).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+#[tokio::test]
+async fn create_scope_mapping_array_persists_all_entries() {
+    let router = make_router_with_both_roles();
+    let body = json!([
+        scope_mapping_json("read"),
+        scope_mapping_json("write"),
+        scope_mapping_json("admin"),
+    ]);
+    let resp = post_scope(&router, body).await;
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let resp = get_scopes(&router).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(body.as_array().unwrap().len(), 3);
+}
+
+#[tokio::test]
+async fn create_scope_mapping_empty_array_returns_201() {
+    let router = make_router();
+    let response = post_scope(&router, json!([])).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+#[tokio::test]
+async fn create_scope_mapping_single_object_still_returns_201() {
+    let router = make_router();
+    let response = post_scope(&router, scope_mapping_json("read")).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+#[tokio::test]
+async fn create_scope_mapping_array_with_reserved_claim_returns_400() {
+    let router = make_router();
+    let body = json!([
+        scope_mapping_json("read"),
+        { "scope": "write", "claims": { "sub": "injected" } },
+    ]);
+    let response = post_scope(&router, body).await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_scope_mapping_array_is_atomic_on_invalid_entry() {
+    // A single invalid entry must roll back the whole batch: the valid "read"
+    // entry preceding the reserved-claim "write" entry must not be persisted.
+    let router = make_router_with_both_roles();
+    let body = json!([
+        scope_mapping_json("read"),
+        { "scope": "write", "claims": { "sub": "injected" } },
+    ]);
+    let response = post_scope(&router, body).await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let resp = get_scopes(&router).await;
+    let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let stored: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(stored, json!([]), "no scope mapping should be persisted when the batch fails");
+}
+
+#[traced_test]
+#[tokio::test]
+async fn create_scope_mapping_array_logs_each_scope() {
+    let router = make_router();
+    let body = json!([scope_mapping_json("read"), scope_mapping_json("write")]);
+    let resp = post_scope(&router, body).await;
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    assert!(logs_contain("scope mapping created"));
+    assert!(logs_contain("read"));
+    assert!(logs_contain("write"));
+}
+
+// ============================================================================
 // Audit logging: actor and key fields appear in log output
 // ============================================================================
 
@@ -564,7 +649,7 @@ async fn database_error_does_not_expose_internal_message_in_response_body() {
         async fn remove_mappings_for(&self, _: &str) -> Result<(), ResourceError> {
             unimplemented!()
         }
-        async fn save_scope_mapping(&self, _: ScopeMapping) -> Result<(), ResourceError> {
+        async fn save_scope_mappings(&self, _: Vec<ScopeMapping>) -> Result<(), ResourceError> {
             unimplemented!()
         }
         async fn update_scope_mapping(&self, _: ScopeMapping) -> Result<(), ResourceError> {

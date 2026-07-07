@@ -102,9 +102,12 @@ impl ResourceStore for MemoryResourceStore {
         Ok(())
     }
 
-    async fn save_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError> {
+    async fn save_scope_mappings(&self, mappings: Vec<ScopeMapping>) -> Result<(), ResourceError> {
+        // Holding the write lock for the whole batch makes the insert atomic.
         let mut store = self.store.write().await;
-        store.scope_mappings.insert(mapping.scope.clone(), mapping);
+        for mapping in mappings {
+            store.scope_mappings.insert(mapping.scope.clone(), mapping);
+        }
         Ok(())
     }
 

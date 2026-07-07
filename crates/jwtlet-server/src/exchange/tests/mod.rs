@@ -423,7 +423,7 @@ impl ResourceStore for StubStore {
         unimplemented!()
     }
 
-    async fn save_scope_mapping(&self, _: ScopeMapping) -> Result<(), ResourceError> {
+    async fn save_scope_mappings(&self, _: Vec<ScopeMapping>) -> Result<(), ResourceError> {
         unimplemented!()
     }
     async fn update_scope_mapping(&self, _: ScopeMapping) -> Result<(), ResourceError> {

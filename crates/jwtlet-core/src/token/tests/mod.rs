@@ -377,13 +377,13 @@ async fn exchange_token_returns_scope_conflict_when_scopes_share_unmergeable_cla
         ok_generator(),
         mapping_store_with_scopes(mapping(&["read", "write"]), scope_mappings),
     )
-        .exchange_token(
-            PARTICIPANT_CONTEXT,
-            vec!["read".to_string(), "write".to_string()],
-            "input-token",
-            None,
-        )
-        .await;
+    .exchange_token(
+        PARTICIPANT_CONTEXT,
+        vec!["read".to_string(), "write".to_string()],
+        "input-token",
+        None,
+    )
+    .await;
     assert!(matches!(result, Err(ExchangeError::ScopeConflict(_))));
 }
 
@@ -447,7 +447,7 @@ impl ResourceStore for StubStore {
     async fn remove_mappings_for(&self, _: &str) -> Result<(), ResourceError> {
         unimplemented!()
     }
-    async fn save_scope_mapping(&self, _: ScopeMapping) -> Result<(), ResourceError> {
+    async fn save_scope_mappings(&self, _: Vec<ScopeMapping>) -> Result<(), ResourceError> {
         unimplemented!()
     }
     async fn update_scope_mapping(&self, _: ScopeMapping) -> Result<(), ResourceError> {

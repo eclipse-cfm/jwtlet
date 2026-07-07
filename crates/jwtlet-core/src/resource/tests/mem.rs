@@ -109,7 +109,7 @@ async fn remove_mappings_for_deletes_all_client_entries() {
 #[tokio::test]
 async fn save_and_update_scope_mapping() {
     let store = MemoryResourceStore::new();
-    store.save_scope_mapping(scope_mapping("read")).await.unwrap();
+    store.save_scope_mappings(vec![scope_mapping("read")]).await.unwrap();
 
     let updated = ScopeMapping::builder()
         .scope("read".to_string())
@@ -123,6 +123,22 @@ async fn save_and_update_scope_mapping() {
 }
 
 #[tokio::test]
+async fn save_scope_mappings_persists_all_entries() {
+    let store = MemoryResourceStore::new();
+    store
+        .save_scope_mappings(vec![
+            scope_mapping("read"),
+            scope_mapping("write"),
+            scope_mapping("admin"),
+        ])
+        .await
+        .unwrap();
+
+    let all = store.list_scope_mappings().await.unwrap();
+    assert_eq!(all.len(), 3);
+}
+
+#[tokio::test]
 async fn update_scope_mapping_returns_not_found_for_missing() {
     let store = MemoryResourceStore::new();
 
@@ -133,7 +149,7 @@ async fn update_scope_mapping_returns_not_found_for_missing() {
 #[tokio::test]
 async fn delete_scope_mapping_removes_entry() {
     let store = MemoryResourceStore::new();
-    store.save_scope_mapping(scope_mapping("write")).await.unwrap();
+    store.save_scope_mappings(vec![scope_mapping("write")]).await.unwrap();
 
     store.remove_scope_mapping("write").await.unwrap();
 
@@ -148,8 +164,8 @@ async fn resolve_mapping_includes_registered_scope_mappings() {
         .save_mapping(mapping("client1", "ctx1", &["read", "write"]))
         .await
         .unwrap();
-    store.save_scope_mapping(scope_mapping("read")).await.unwrap();
-    store.save_scope_mapping(scope_mapping("write")).await.unwrap();
+    store.save_scope_mappings(vec![scope_mapping("read")]).await.unwrap();
+    store.save_scope_mappings(vec![scope_mapping("write")]).await.unwrap();
 
     let pair = store.resolve_mapping("client1", "ctx1").await.unwrap().unwrap();
     assert_eq!(pair.scope_mappings.len(), 2);
@@ -164,7 +180,7 @@ async fn resolve_mapping_omits_scope_mappings_not_registered() {
         .save_mapping(mapping("client1", "ctx1", &["read", "write"]))
         .await
         .unwrap();
-    store.save_scope_mapping(scope_mapping("read")).await.unwrap();
+    store.save_scope_mappings(vec![scope_mapping("read")]).await.unwrap();
 
     let pair = store.resolve_mapping("client1", "ctx1").await.unwrap().unwrap();
     assert_eq!(pair.scope_mappings.len(), 1);

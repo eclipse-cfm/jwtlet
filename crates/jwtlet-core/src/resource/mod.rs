@@ -35,7 +35,8 @@ pub trait ResourceStore: Send + Sync {
     async fn remove_mapping(&self, client_identifier: &str, participant_context: &str) -> Result<(), ResourceError>;
     async fn remove_mappings_for(&self, client_identifier: &str) -> Result<(), ResourceError>;
 
-    async fn save_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError>;
+    /// Persists all `mappings` atomically: either every mapping is saved or none is.
+    async fn save_scope_mappings(&self, mappings: Vec<ScopeMapping>) -> Result<(), ResourceError>;
     async fn update_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError>;
     async fn remove_scope_mapping(&self, scope: &str) -> Result<(), ResourceError>;
 
@@ -184,9 +185,13 @@ impl ResourceService {
         self.store.remove_mappings_for(client_id).await
     }
 
-    pub async fn save_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError> {
-        validate_scope_claims(&mapping.claims)?;
-        self.store.save_scope_mapping(mapping).await
+    /// Validates and persists all `mappings` atomically. If any mapping fails
+    /// validation, none is persisted.
+    pub async fn save_scope_mappings(&self, mappings: Vec<ScopeMapping>) -> Result<(), ResourceError> {
+        for mapping in &mappings {
+            validate_scope_claims(&mapping.claims)?;
+        }
+        self.store.save_scope_mappings(mappings).await
     }
 
     pub async fn update_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError> {

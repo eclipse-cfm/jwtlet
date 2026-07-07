@@ -26,9 +26,27 @@ use axum::{
 use dsdk_facet_core::jwt::{JwtVerificationError, JwtVerifier};
 use jwtlet_core::resource::{ResourceMapping, ResourceService, ScopeMapping};
 use jwtlet_core::saccount::{AuthError, ServiceAccountAuthorizer};
+use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::info;
+
+/// Accepts either a single `T` or an array of `T` in a JSON request body.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum OneOrMany<T> {
+    One(T),
+    Many(Vec<T>),
+}
+
+impl<T> OneOrMany<T> {
+    fn into_vec(self) -> Vec<T> {
+        match self {
+            OneOrMany::One(item) => vec![item],
+            OneOrMany::Many(items) => items,
+        }
+    }
+}
 
 /// The authenticated caller's `sub` claim, inserted by the auth middleware.
 #[derive(Clone)]
@@ -203,10 +221,13 @@ async fn delete_client_mappings(
 async fn create_scope_mapping(
     State(service): State<Arc<ResourceService>>,
     Extension(actor): Extension<Actor>,
-    Json(mapping): Json<ScopeMapping>,
+    Json(payload): Json<OneOrMany<ScopeMapping>>,
 ) -> Result<StatusCode, ManagementApiError> {
-    service.save_scope_mapping(mapping.clone()).await?;
-    info!(actor = %actor.0, scope = %mapping.scope, "scope mapping created");
+    let mappings = payload.into_vec();
+    service.save_scope_mappings(mappings.clone()).await?;
+    for mapping in &mappings {
+        info!(actor = %actor.0, scope = %mapping.scope, "scope mapping created");
+    }
     Ok(StatusCode::CREATED)
 }
 
