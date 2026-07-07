@@ -98,24 +98,24 @@ async fn verify_populates_claims_from_scope_mappings() {
     let mut read_claims = Map::new();
     read_claims.insert("role".to_string(), Value::String("reader".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("read".to_string())
                 .claims(read_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
     let mut write_claims = Map::new();
     write_claims.insert("level".to_string(), Value::String("editor".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("write".to_string())
                 .claims(write_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
@@ -155,24 +155,24 @@ async fn verify_returns_error_when_scopes_have_conflicting_claim_keys() {
     let mut read_claims = Map::new();
     read_claims.insert("role".to_string(), Value::Number(42.into()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("read".to_string())
                 .claims(read_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
     let mut write_claims = Map::new();
     write_claims.insert("role".to_string(), Value::String("writer".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("write".to_string())
                 .claims(write_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
@@ -193,24 +193,24 @@ async fn verify_returns_merged_claim_when_scopes_have_mergeable_claim_keys() {
     let mut read_claims = Map::new();
     read_claims.insert("role".to_string(), Value::String("reader".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("read".to_string())
                 .claims(read_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
     let mut write_claims = Map::new();
     write_claims.insert("role".to_string(), Value::String("writer".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("write".to_string())
                 .claims(write_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
@@ -221,7 +221,6 @@ async fn verify_returns_merged_claim_when_scopes_have_mergeable_claim_keys() {
     let result = result.unwrap();
     assert!(result.verified);
     assert_eq!(result.claims["role"], Value::String("reader writer".to_string()));
-
 }
 
 #[tokio::test]
@@ -235,24 +234,24 @@ async fn verify_succeeds_when_scopes_have_distinct_claim_keys() {
     let mut read_claims = Map::new();
     read_claims.insert("read_role".to_string(), Value::String("reader".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("read".to_string())
                 .claims(read_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
     let mut write_claims = Map::new();
     write_claims.insert("write_role".to_string(), Value::String("writer".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("write".to_string())
                 .claims(write_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 
@@ -272,7 +271,9 @@ async fn save_scope_mapping_rejects_reserved_claims() {
         let mut claims = Map::new();
         claims.insert((*reserved).to_string(), Value::String("x".to_string()));
         let result = service
-            .save_scope_mapping(ScopeMapping::builder().scope("read".to_string()).claims(claims).build())
+            .save_scope_mappings(vec![
+                ScopeMapping::builder().scope("read".to_string()).claims(claims).build(),
+            ])
             .await;
         assert!(
             matches!(result, Err(ResourceError::ReservedClaim(ref k)) if k == reserved),
@@ -288,7 +289,9 @@ async fn save_scope_mapping_allows_non_reserved_claims() {
     claims.insert("role".to_string(), Value::String("reader".to_string()));
     claims.insert("department".to_string(), Value::String("eng".to_string()));
     let result = service
-        .save_scope_mapping(ScopeMapping::builder().scope("read".to_string()).claims(claims).build())
+        .save_scope_mappings(vec![
+            ScopeMapping::builder().scope("read".to_string()).claims(claims).build(),
+        ])
         .await;
     assert!(result.is_ok());
 }
@@ -299,12 +302,12 @@ async fn update_scope_mapping_rejects_reserved_claims() {
     let mut ok_claims = Map::new();
     ok_claims.insert("role".to_string(), Value::String("reader".to_string()));
     service
-        .save_scope_mapping(
+        .save_scope_mappings(vec![
             ScopeMapping::builder()
                 .scope("read".to_string())
                 .claims(ok_claims)
                 .build(),
-        )
+        ])
         .await
         .unwrap();
 

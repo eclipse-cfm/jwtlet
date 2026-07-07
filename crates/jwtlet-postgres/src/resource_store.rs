@@ -228,18 +228,24 @@ impl ResourceStore for PostgresResourceStore {
         Ok(())
     }
 
-    async fn save_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError> {
-        let claims = Value::Object(mapping.claims.clone());
+    async fn save_scope_mappings(&self, mappings: Vec<ScopeMapping>) -> Result<(), ResourceError> {
+        let mut tx = self.pool.begin().await.map_err(db_error)?;
 
-        sqlx::query(
-            "INSERT INTO scope_mappings (scope, claims) VALUES ($1, $2)
-             ON CONFLICT (scope) DO UPDATE SET claims = EXCLUDED.claims",
-        )
-        .bind(&mapping.scope)
-        .bind(&claims)
-        .execute(&self.pool)
-        .await
-        .map_err(db_error)?;
+        for mapping in &mappings {
+            let claims = Value::Object(mapping.claims.clone());
+
+            sqlx::query(
+                "INSERT INTO scope_mappings (scope, claims) VALUES ($1, $2)
+                 ON CONFLICT (scope) DO UPDATE SET claims = EXCLUDED.claims",
+            )
+            .bind(&mapping.scope)
+            .bind(&claims)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+        }
+
+        tx.commit().await.map_err(db_error)?;
 
         Ok(())
     }

@@ -297,12 +297,35 @@ async fn save_scope_mapping() {
     store.initialize().await.unwrap();
 
     let sm = scope_mapping("read", claims(&[("role", json!("viewer"))]));
-    store.save_scope_mapping(sm).await.unwrap();
+    store.save_scope_mappings(vec![sm]).await.unwrap();
 
     let all = store.list_scope_mappings().await.unwrap();
     assert_eq!(all.len(), 1);
     assert_eq!(all[0].scope, "read");
     assert_eq!(all[0].claims["role"], json!("viewer"));
+}
+
+#[tokio::test]
+async fn save_scope_mappings_persists_all_entries_in_one_transaction() {
+    let (pool, _container) = setup_postgres().await;
+    let store = PostgresResourceStore::new(pool);
+    store.initialize().await.unwrap();
+
+    store
+        .save_scope_mappings(vec![
+            scope_mapping("read", claims(&[("role", json!("viewer"))])),
+            scope_mapping("write", claims(&[("role", json!("editor"))])),
+            scope_mapping("admin", claims(&[("role", json!("admin"))])),
+        ])
+        .await
+        .unwrap();
+
+    let all = store.list_scope_mappings().await.unwrap();
+    assert_eq!(all.len(), 3);
+    let scopes: HashSet<String> = all.iter().map(|s| s.scope.clone()).collect();
+    assert!(scopes.contains("read"));
+    assert!(scopes.contains("write"));
+    assert!(scopes.contains("admin"));
 }
 
 #[tokio::test]
@@ -312,13 +335,13 @@ async fn save_scope_mapping_is_upsert() {
     store.initialize().await.unwrap();
 
     store
-        .save_scope_mapping(scope_mapping("read", claims(&[("role", json!("viewer"))])))
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("viewer"))]))])
         .await
         .unwrap();
 
     // Save again with different claims — should overwrite, not error.
     store
-        .save_scope_mapping(scope_mapping("read", claims(&[("role", json!("editor"))])))
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("editor"))]))])
         .await
         .unwrap();
 
@@ -334,7 +357,7 @@ async fn update_scope_mapping() {
     store.initialize().await.unwrap();
 
     store
-        .save_scope_mapping(scope_mapping("read", claims(&[("role", json!("viewer"))])))
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("viewer"))]))])
         .await
         .unwrap();
 
@@ -371,7 +394,7 @@ async fn remove_scope_mapping() {
     store.initialize().await.unwrap();
 
     store
-        .save_scope_mapping(scope_mapping("read", claims(&[("role", json!("viewer"))])))
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("viewer"))]))])
         .await
         .unwrap();
 
@@ -407,15 +430,15 @@ async fn list_scope_mappings_returns_all() {
     store.initialize().await.unwrap();
 
     store
-        .save_scope_mapping(scope_mapping("read", claims(&[("role", json!("viewer"))])))
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("viewer"))]))])
         .await
         .unwrap();
     store
-        .save_scope_mapping(scope_mapping("write", claims(&[("role", json!("editor"))])))
+        .save_scope_mappings(vec![scope_mapping("write", claims(&[("role", json!("editor"))]))])
         .await
         .unwrap();
     store
-        .save_scope_mapping(scope_mapping("admin", claims(&[("role", json!("admin"))])))
+        .save_scope_mappings(vec![scope_mapping("admin", claims(&[("role", json!("admin"))]))])
         .await
         .unwrap();
 
@@ -435,15 +458,15 @@ async fn resolve_mapping_returns_matching_scope_mappings() {
     store.initialize().await.unwrap();
 
     store
-        .save_scope_mapping(scope_mapping("read", claims(&[("can_read", json!(true))])))
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("can_read", json!(true))]))])
         .await
         .unwrap();
     store
-        .save_scope_mapping(scope_mapping("write", claims(&[("can_write", json!(true))])))
+        .save_scope_mappings(vec![scope_mapping("write", claims(&[("can_write", json!(true))]))])
         .await
         .unwrap();
     store
-        .save_scope_mapping(scope_mapping("admin", claims(&[("is_admin", json!(true))])))
+        .save_scope_mappings(vec![scope_mapping("admin", claims(&[("is_admin", json!(true))]))])
         .await
         .unwrap();
 
@@ -492,7 +515,7 @@ async fn resolve_mapping_with_partial_scope_mappings() {
 
     // Only define scope mapping for "read", not "write".
     store
-        .save_scope_mapping(scope_mapping("read", claims(&[("role", json!("viewer"))])))
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("viewer"))]))])
         .await
         .unwrap();
 
@@ -521,7 +544,7 @@ async fn resolve_mapping_scope_mapping_with_complex_claims() {
     ]);
 
     store
-        .save_scope_mapping(scope_mapping("read", complex_claims.clone()))
+        .save_scope_mappings(vec![scope_mapping("read", complex_claims.clone())])
         .await
         .unwrap();
     store
