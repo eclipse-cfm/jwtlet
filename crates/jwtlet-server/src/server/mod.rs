@@ -23,6 +23,8 @@ use dsdk_facet_core::jwt::{JwkSetProvider, JwtVerifier};
 use jwtlet_core::resource::ResourceService;
 use jwtlet_core::saccount::ServiceAccountAuthorizer;
 use jwtlet_core::token::TokenExchangeService;
+use opentelemetry::global;
+use opentelemetry_http::HeaderExtractor;
 use std::net::IpAddr;
 use std::sync::Arc;
 use thiserror::Error;
@@ -30,8 +32,6 @@ use tokio::net::TcpListener;
 use tokio::select;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
-use opentelemetry::global;
-use opentelemetry_http::HeaderExtractor;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
@@ -168,9 +168,8 @@ async fn health() -> &'static str {
 /// (`traceparent`/`tracestate`) from the inbound request headers, so jwtlet's spans become children
 /// of the calling service's span rather than starting a new trace.
 fn make_http_span(request: &axum::extract::Request) -> tracing::Span {
-    let parent_cx = global::get_text_map_propagator(|propagator| {
-        propagator.extract(&HeaderExtractor(request.headers()))
-    });
+    let parent_cx =
+        global::get_text_map_propagator(|propagator| propagator.extract(&HeaderExtractor(request.headers())));
     let span = tracing::info_span!(
         "http_request",
         otel.kind = "server",

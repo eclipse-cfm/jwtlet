@@ -83,6 +83,7 @@ async fn test_token_exchange() -> anyhow::Result<()> {
     let params = [
         ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
         ("subject_token", sa_token.as_str()),
+        ("subject_token_type", "urn:ietf:params:oauth:token-type:jwt"),
         ("resource", PARTICIPANT_CONTEXT),
         ("scope", "read"),
         ("audience", TOKEN_AUDIENCE),
@@ -190,6 +191,7 @@ async fn test_token_exchange_with_scope_mapping() -> anyhow::Result<()> {
     let params = [
         ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
         ("subject_token", sa_token.as_str()),
+        ("subject_token_type", "urn:ietf:params:oauth:token-type:jwt"),
         ("resource", PARTICIPANT_CONTEXT),
         ("scope", "read write"),
         ("audience", TOKEN_AUDIENCE),
@@ -244,6 +246,7 @@ async fn test_token_exchange_audience_not_in_allowlist() -> anyhow::Result<()> {
     let params = [
         ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
         ("subject_token", sa_token.as_str()),
+        ("subject_token_type", "urn:ietf:params:oauth:token-type:jwt"),
         ("resource", PARTICIPANT_CONTEXT),
         ("scope", "read"),
         ("audience", "https://not-in-allowlist.example.com"),
@@ -271,6 +274,7 @@ async fn test_token_exchange_unauthorized() -> anyhow::Result<()> {
     let params = [
         ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
         ("subject_token", sa_token.as_str()),
+        ("subject_token_type", "urn:ietf:params:oauth:token-type:jwt"),
         ("resource", "no-such-context"),
         ("scope", "read"),
     ];
@@ -320,6 +324,7 @@ async fn test_token_jwks_verification() -> anyhow::Result<()> {
     let params = [
         ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
         ("subject_token", sa_token.as_str()),
+        ("subject_token_type", "urn:ietf:params:oauth:token-type:jwt"),
         ("resource", PARTICIPANT_CONTEXT),
         ("scope", "read"),
     ];

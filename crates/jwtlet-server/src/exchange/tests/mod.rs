@@ -12,7 +12,7 @@
 
 #![allow(clippy::unwrap_used)]
 
-use crate::exchange::{TOKEN_EXCHANGE_GRANT_TYPE, TokenExchangeForm, token_exchange};
+use crate::exchange::{ISSUED_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE, TokenExchangeForm, token_exchange};
 use async_trait::async_trait;
 use axum::body::to_bytes;
 use axum::extract::{Form, State};
@@ -156,6 +156,17 @@ async fn exchange_token_passes_empty_scopes_when_scope_absent() {
     assert_eq!(response.status(), StatusCode::OK);
 }
 
+#[tokio::test]
+async fn exchange_token_returns_400_for_unsupported_subject_token_type() {
+    let service = make_service(ok_verifier(), ok_generator(), empty_store());
+    let mut f = form(None);
+    f.subject_token_type = "urn:ietf:params:oauth:token-type:access_token".to_string();
+    let response = token_exchange(State(Arc::new(service)), Form(f)).await.into_response();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = json_body(response).await;
+    assert_eq!(body["error"], "invalid_request");
+}
+
 async fn json_body(response: axum::response::Response) -> serde_json::Value {
     let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
     serde_json::from_slice(&bytes).unwrap()
@@ -169,6 +180,7 @@ fn form_with_audience(scope: Option<&str>, audience: Option<&str>) -> TokenExcha
     TokenExchangeForm {
         grant_type: TOKEN_EXCHANGE_GRANT_TYPE.to_string(),
         subject_token: "input.jwt.token".to_string(),
+        subject_token_type: ISSUED_TOKEN_TYPE.to_string(),
         resource: PARTICIPANT_CONTEXT.to_string(),
         scope: scope.map(str::to_string),
         audience: audience.map(str::to_string),
@@ -349,9 +361,15 @@ async fn exchange_token_returns_no_error_description_on_token_verification_failu
 #[tokio::test]
 async fn exchange_token_returns_400_for_scope_claim_conflict() {
     let mut read_claims = Map::new();
-    read_claims.insert("role".to_string(), json!({"readOnly": true, "description": "reader description"}));
+    read_claims.insert(
+        "role".to_string(),
+        json!({"readOnly": true, "description": "reader description"}),
+    );
     let mut write_claims = Map::new();
-    write_claims.insert("role".to_string(), json!({"readOnly": false, "description": "writer description"}));
+    write_claims.insert(
+        "role".to_string(),
+        json!({"readOnly": false, "description": "writer description"}),
+    );
     let mut scope_mappings = HashMap::new();
     scope_mappings.insert(
         "read".to_string(),
