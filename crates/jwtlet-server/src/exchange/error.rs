@@ -21,6 +21,8 @@ use thiserror::Error;
 pub enum ExchangeApiError {
     #[error("Unsupported grant_type: {0}")]
     UnsupportedGrantType(String),
+    #[error("Unsupported subject_token_type: {0}")]
+    UnsupportedTokenType(String),
     #[error(transparent)]
     Exchange(#[from] ExchangeError),
 }
@@ -36,6 +38,7 @@ impl IntoResponse for ExchangeApiError {
     fn into_response(self) -> Response {
         let (status, error) = match self {
             ExchangeApiError::UnsupportedGrantType(_) => (StatusCode::BAD_REQUEST, "unsupported_grant_type"),
+            ExchangeApiError::UnsupportedTokenType(_) => (StatusCode::BAD_REQUEST, "invalid_request"),
             ExchangeApiError::Exchange(ExchangeError::TokenVerification(_)) => {
                 (StatusCode::BAD_REQUEST, "invalid_grant")
             }

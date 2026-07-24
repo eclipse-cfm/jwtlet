@@ -490,7 +490,11 @@ async fn create_scope_mapping_array_is_atomic_on_invalid_entry() {
     let resp = get_scopes(&router).await;
     let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
     let stored: Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(stored, json!([]), "no scope mapping should be persisted when the batch fails");
+    assert_eq!(
+        stored,
+        json!([]),
+        "no scope mapping should be persisted when the batch fails"
+    );
 }
 
 #[traced_test]

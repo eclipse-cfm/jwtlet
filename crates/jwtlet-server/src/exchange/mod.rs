@@ -34,6 +34,8 @@ const ISSUED_TOKEN_TYPE: &str = "urn:ietf:params:oauth:token-type:jwt";
 pub struct TokenExchangeForm {
     grant_type: String,
     subject_token: String,
+    /// RFC 8693 required parameter identifying the type of `subject_token`.
+    subject_token_type: String,
     /// Identifies the participant context the caller is requesting a token for.
     resource: String,
     #[serde(default)]
@@ -65,6 +67,10 @@ pub async fn token_exchange(
 ) -> Result<(StatusCode, Json<TokenExchangeResponse>), ExchangeApiError> {
     if form.grant_type != TOKEN_EXCHANGE_GRANT_TYPE {
         return Err(ExchangeApiError::UnsupportedGrantType(form.grant_type));
+    }
+
+    if form.subject_token_type != ISSUED_TOKEN_TYPE {
+        return Err(ExchangeApiError::UnsupportedTokenType(form.subject_token_type));
     }
 
     let scopes: Vec<String> = form
