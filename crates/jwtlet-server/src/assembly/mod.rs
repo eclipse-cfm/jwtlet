@@ -12,8 +12,10 @@
 
 use crate::config::{JwtletConfig, K8sConfig, PostgresPoolConfig, StorageBackend, VaultConfig};
 use crate::meta::AuthorizationServerMetadata;
+use dsdk_facet_core::context::ParticipantContext;
 use dsdk_facet_core::jwt::{
-    JwkSetProvider, JwtGenerator, JwtVerifier, VaultJwtGenerator, VaultVerificationKeyResolver,
+    JwkSetProvider, JwtGenerator, JwtVerifier, PrefixTransitKeyResolver, VaultJwtGenerator,
+    VaultVerificationKeyResolver,
 };
 use dsdk_facet_core::vault::VaultSigningClient;
 use dsdk_facet_hashicorp_vault::{HashicorpVaultClient, HashicorpVaultConfig, VaultAuthConfig};
@@ -300,6 +302,7 @@ async fn create_key_resolver(
 ) -> Result<Arc<dyn JwkSetProvider>, JwtletError> {
     let resolver = VaultVerificationKeyResolver::builder()
         .vault_client(vault_client)
+        .signing_context(ParticipantContext::builder().id("jwtlet").build())
         .build();
     resolver.initialize().await.map_err(JwtletError::Verifier)?;
     Ok(Arc::new(resolver))
@@ -309,7 +312,7 @@ fn create_jwt_generator(vault_client: Arc<dyn VaultSigningClient>, prefix: &str)
     Box::new(
         VaultJwtGenerator::builder()
             .signing_client(vault_client)
-            .key_name_prefix(prefix)
+            .key_resolver(Arc::new(PrefixTransitKeyResolver::builder().prefix(prefix).build()))
             .build(),
     )
 }
