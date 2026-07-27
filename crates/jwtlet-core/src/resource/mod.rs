@@ -94,6 +94,7 @@ pub struct ScopeMapping {
     pub claims: Map<String, Value>,
 }
 
+#[derive(Debug)]
 pub struct MappingPair {
     pub resource_mapping: ResourceMapping,
     pub scope_mappings: HashMap<String, ScopeMapping>,
@@ -104,6 +105,7 @@ pub struct ResourceService {
     store: Arc<dyn ResourceStore>,
 }
 
+#[derive(Debug)]
 pub struct VerificationResult {
     pub verified: bool,
     pub claims: HashMap<String, Value>,
@@ -129,6 +131,7 @@ impl ResourceService {
                 audiences: HashSet::new(),
             });
         };
+
         if !scopes.iter().all(|s| pair.resource_mapping.scopes.contains(s)) {
             return Ok(VerificationResult {
                 verified: false,
