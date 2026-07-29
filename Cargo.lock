@@ -1541,14 +1541,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "dsdk-facet-core"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "531152960c8d5030e73c868e385967ed09677808a5541e672cabae5fc0d931f0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "bon",
+ "bs58",
+ "chrono",
+ "ed25519-dalek",
+ "hex",
+ "hmac",
+ "http 1.4.0",
+ "jsonwebtoken 10.3.0",
+ "log",
+ "pingora",
+ "pkcs8 0.10.2",
+ "rand 0.9.4",
+ "regex",
+ "reqwest 0.12.28",
+ "rsa",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sodiumoxide",
+ "thiserror 2.0.18",
+ "tokio",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "dsdk-facet-e2e-tests"
 version = "0.0.1"
 source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#201a5929a643145b146a8b375afa43c90c476c33"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
- "dsdk-facet-core",
- "dsdk-facet-hashicorp-vault",
+ "dsdk-facet-core 0.0.1",
+ "dsdk-facet-hashicorp-vault 0.0.1",
  "dsdk-facet-testcontainers",
  "jsonwebtoken 10.3.0",
  "reqwest 0.12.28",
@@ -1567,7 +1600,28 @@ dependencies = [
  "bon",
  "bs58",
  "chrono",
- "dsdk-facet-core",
+ "dsdk-facet-core 0.0.1",
+ "log",
+ "notify 8.2.0",
+ "rand 0.9.4",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "dsdk-facet-hashicorp-vault"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bcd8e7edda2ebecf123d83df92649ddd9443e2252116bc35fa70bcc62a0d409"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "bon",
+ "bs58",
+ "chrono",
+ "dsdk-facet-core 0.1.0",
  "log",
  "notify 8.2.0",
  "rand 0.9.4",
@@ -1579,13 +1633,14 @@ dependencies = [
 
 [[package]]
 name = "dsdk-facet-postgres"
-version = "0.0.1"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#201a5929a643145b146a8b375afa43c90c476c33"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "469c556033cb765f9a703be342c58f788a0aaec6cff1743204ff86e19d95ef65"
 dependencies = [
  "async-trait",
  "bon",
  "chrono",
- "dsdk-facet-core",
+ "dsdk-facet-core 0.1.0",
  "rand 0.9.4",
  "serde",
  "serde_json",
@@ -2826,7 +2881,7 @@ dependencies = [
  "async-trait",
  "bon",
  "chrono",
- "dsdk-facet-core",
+ "dsdk-facet-core 0.1.0",
  "notify 6.1.1",
  "reqwest 0.12.28",
  "serde",
@@ -2843,9 +2898,9 @@ name = "jwtlet-e2e-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "dsdk-facet-core",
+ "dsdk-facet-core 0.1.0",
  "dsdk-facet-e2e-tests",
- "dsdk-facet-hashicorp-vault",
+ "dsdk-facet-hashicorp-vault 0.1.0",
  "jsonwebtoken 9.3.1",
  "reqwest 0.12.28",
  "serde",
@@ -2875,8 +2930,8 @@ dependencies = [
  "axum",
  "bon",
  "config",
- "dsdk-facet-core",
- "dsdk-facet-hashicorp-vault",
+ "dsdk-facet-core 0.1.0",
+ "dsdk-facet-hashicorp-vault 0.1.0",
  "dsdk-facet-postgres",
  "humantime-serde",
  "jwtlet-core",

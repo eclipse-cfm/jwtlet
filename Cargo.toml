@@ -33,9 +33,9 @@ opentelemetry-otlp = { version = "0.32", default-features = false, features = ["
 opentelemetry-http = "0.32"
 tracing-opentelemetry = "0.33"
 
-dsdk-facet-core = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
-dsdk-facet-postgres = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
-dsdk-facet-hashicorp-vault = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
+dsdk-facet-core = "0.1.0"
+dsdk-facet-postgres = "0.1.0"
+dsdk-facet-hashicorp-vault = "0.1.0"
 
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "json"] }
 
