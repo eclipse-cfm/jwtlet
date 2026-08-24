@@ -125,6 +125,45 @@ Set `RUST_LOG` to control verbosity (`trace`, `debug`, `info`, `warn`, `error`):
 RUST_LOG=debug jwtlet-server config.toml
 ```
 
+## Container Image
+
+Multi-architecture images (`linux/amd64`, `linux/arm64`) are published to the GitHub
+Container Registry:
+
+```bash
+docker pull ghcr.io/eclipse-cfm/jwtlet:latest
+```
+
+| Tag | Points at |
+| --- | --- |
+| `latest` | the most recent stable release |
+| `0.2.0` | that exact release |
+| `0.2` | the latest patch on the `0.2` minor line |
+| `main` | the current `main` branch |
+| `sha-<short>` | a specific commit |
+
+Pre-releases (for example `0.2.0-rc.1`) are published under their exact version only —
+they never move `latest` or the minor-line tag.
+
+## Releasing
+
+Releases are cut by pushing a git tag. The `Release` workflow verifies the tag, builds and
+publishes the image, and then creates the GitHub Release.
+
+1. Bump `version` under `[workspace.package]` in the root `Cargo.toml`. All crates inherit
+   it via `version.workspace = true`, so this is the only version to change.
+2. Run `cargo check` so `Cargo.lock` picks up the new workspace-member versions.
+3. Commit as `chore: release 0.2.0` and merge to `main`.
+4. Tag the merge commit and push it:
+
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+
+The tag must match the `Cargo.toml` version exactly, or the workflow fails before anything
+is published. Use a `v0.2.0-rc.1` style tag to cut a pre-release.
+
 ## License
 
 Apache-2.0
