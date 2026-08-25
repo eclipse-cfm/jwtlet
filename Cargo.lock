@@ -2876,7 +2876,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "bon",
@@ -2895,7 +2895,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-e2e-tests"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "dsdk-facet-core 0.1.0",
@@ -2910,7 +2910,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-postgres"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "jwtlet-core",
@@ -2923,7 +2923,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-server"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "async-trait",
