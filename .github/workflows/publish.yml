@@ -4,15 +4,19 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "*"
+  workflow_call:
+    inputs:
+      latest:
+        description: "Also tag the image as :latest (stable releases only)"
+        type: boolean
+        default: false
 
 env:
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: publish-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 
 jobs:
@@ -50,13 +54,14 @@ jobs:
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ${{ env.GHCR_IMAGE }}
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=branch
-            type=ref,event=tag
+            type=sha
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ inputs.latest || false }}
 
       - name: "Build and push Docker image"
         id: build
@@ -110,13 +115,14 @@ jobs:
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ${{ env.GHCR_IMAGE }}
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=branch
-            type=ref,event=tag
+            type=sha
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ inputs.latest || false }}
 
       - name: "Log in to GitHub Container Registry"
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0

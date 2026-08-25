@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: "Check tag matches Cargo.toml"
+        id: v
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          base="${version%%-*}"
+          manifest="$(grep -m1 -E '^version = ' Cargo.toml | sed -E 's/^version = "(.*)"/\1/')"
+          # A stable tag must match Cargo.toml exactly. A prerelease tag (v0.1.0-rc.1) may
+          # instead match the version it is a candidate for (0.1.0), so release candidates
+          # can be cut without churning Cargo.toml.
+          if [ "$version" != "$manifest" ] && [ "$base" != "$manifest" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME implies version $version but [workspace.package] version is $manifest"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish-image:
+    name: Publish image
+    needs: verify
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      latest: ${{ needs.verify.outputs.prerelease == 'false' }}
+
+  github-release:
+    name: Create GitHub Release
+    needs:
+      - verify
+      - publish-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: "Compose notes and create release"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$GITHUB_REF_NAME" --jq '.body' > notes.md
+          {
+            echo
+            echo "## Container image"
+            echo
+            echo '```'
+            echo "docker pull ghcr.io/$GITHUB_REPOSITORY:$VERSION"
+            echo '```'
+          } >> notes.md
+          args=(--title "v$VERSION" --notes-file notes.md)
+          if [ "$PRERELEASE" = "true" ]; then
+            args+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" "${args[@]}"
