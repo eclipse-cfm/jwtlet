@@ -2923,21 +2923,6 @@ dependencies = [
 
 [[package]]
 name = "jsonwebtoken"
-version = "9.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a87cc7a48537badeae96744432de36f4be2b4a34a05a5ef32e9dd8a1c169dde"
-dependencies = [
- "base64 0.22.1",
- "js-sys",
- "pem",
- "ring",
- "serde",
- "serde_json",
- "simple_asn1",
-]
-
-[[package]]
-name = "jsonwebtoken"
 version = "10.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eba32bfb4ffdeaca3e34431072faf01745c9b26d25504aa7a6cf5684334fc4fc"
@@ -3011,7 +2996,7 @@ dependencies = [
  "dsdk-facet-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dsdk-facet-e2e-tests",
  "dsdk-facet-hashicorp-vault 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jsonwebtoken 9.3.1",
+ "jsonwebtoken 11.1.0",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5491,7 +5476,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
