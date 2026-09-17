@@ -43,7 +43,7 @@ jwtlet-core = { path = "crates/jwtlet-core" }
 jwtlet-postgres = { path = "crates/jwtlet-postgres" }
 
 anyhow = "1"
-config = "0.14"
+config = "0.15"
 humantime-serde = "1"
 
 rstest = "0.27"
