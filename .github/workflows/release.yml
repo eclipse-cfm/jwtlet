@@ -46,9 +46,38 @@ jobs:
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Gate: the image ships every dependency, so all of them must be vetted by the Eclipse IP Team.
+  # Runs the Eclipse Dash License Tool (scripts/check-dependencies.sh) and fails on any restricted
+  # or rejected dependency. Nothing is committed here; regenerate DEPENDENCIES.txt with the same
+  # script when dependencies change.
+  licenses:
+    name: Check dependency licenses
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Java (for Eclipse Dash License Tool)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Check dependency licenses (Eclipse Dash)
+        run: scripts/check-dependencies.sh
+
   publish-image:
     name: Publish image
-    needs: verify
+    needs:
+      - verify
+      - licenses
     permissions:
       contents: read
       packages: write
