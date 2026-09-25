@@ -20,6 +20,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
 dependencies = [
  "cfg-if",
+ "const-random",
  "getrandom 0.3.4",
  "once_cell",
  "version_check",
@@ -101,7 +102,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -112,7 +113,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1378,6 +1379,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "daemonix"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0b747381562a10fd2104e9333ad72fe5158d79de81b64426fc9e229c6d3fb38"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "daemonize"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1427,6 +1437,19 @@ dependencies = [
  "darling_core",
  "quote",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "dashmap"
+version = "5.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
+dependencies = [
+ "cfg-if",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
 ]
 
 [[package]]
@@ -1587,7 +1610,7 @@ dependencies = [
  "http 1.5.0",
  "jsonwebtoken 10.4.0",
  "log",
- "pingora",
+ "pingora 0.8.1",
  "pkcs8",
  "rand 0.9.5",
  "regex",
@@ -1606,7 +1629,7 @@ dependencies = [
 [[package]]
 name = "dsdk-facet-core"
 version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#5646b8b5674497bd6bdb815bed8b5a1378f22cb7"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -1619,7 +1642,7 @@ dependencies = [
  "http 1.5.0",
  "jsonwebtoken 11.1.0",
  "log",
- "pingora",
+ "pingora 0.9.0",
  "pkcs8",
  "rand 0.10.2",
  "regex",
@@ -1638,7 +1661,7 @@ dependencies = [
 [[package]]
 name = "dsdk-facet-e2e-tests"
 version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#5646b8b5674497bd6bdb815bed8b5a1378f22cb7"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -1676,7 +1699,7 @@ dependencies = [
 [[package]]
 name = "dsdk-facet-hashicorp-vault"
 version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#5646b8b5674497bd6bdb815bed8b5a1378f22cb7"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -1712,7 +1735,7 @@ dependencies = [
 [[package]]
 name = "dsdk-facet-testcontainers"
 version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#5646b8b5674497bd6bdb815bed8b5a1378f22cb7"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
@@ -1856,7 +1879,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1964,6 +1987,18 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "spin 0.9.9",
+]
+
+[[package]]
+name = "flurry"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf5efcf77a4da27927d3ab0509dec5b0954bb3bc59da5a1de9e52642ebd4cdf9"
+dependencies = [
+ "ahash",
+ "num_cpus",
+ "parking_lot",
+ "seize",
 ]
 
 [[package]]
@@ -3221,6 +3256,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "memoffset"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3291,7 +3335,20 @@ dependencies = [
  "bitflags 1.3.2",
  "cfg-if",
  "libc",
- "memoffset",
+ "memoffset 0.6.5",
+]
+
+[[package]]
+name = "nix"
+version = "0.31.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+dependencies = [
+ "bitflags 2.13.2",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+ "memoffset 0.9.1",
 ]
 
 [[package]]
@@ -3327,7 +3384,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3791,9 +3848,20 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "54a75f2ff8e122aa80ab202dc865294fe59cd856c2a5dab2d3df6e122c93b941"
 dependencies = [
- "pingora-core",
- "pingora-http",
- "pingora-timeout",
+ "pingora-core 0.8.1",
+ "pingora-http 0.8.1",
+ "pingora-timeout 0.8.1",
+]
+
+[[package]]
+name = "pingora"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc02712a3847828d6b798ecf31f0ac64e138df26b9513e20d52319cf3cecd11e"
+dependencies = [
+ "pingora-core 0.9.0",
+ "pingora-http 0.9.0",
+ "pingora-timeout 0.9.0",
 ]
 
 [[package]]
@@ -3820,17 +3888,68 @@ dependencies = [
  "httpdate",
  "libc",
  "log",
- "nix",
+ "nix 0.24.3",
  "once_cell",
  "openssl-probe 0.1.6",
  "parking_lot",
  "percent-encoding",
- "pingora-error",
- "pingora-http",
- "pingora-pool",
- "pingora-runtime",
- "pingora-timeout",
+ "pingora-error 0.8.1",
+ "pingora-http 0.8.1",
+ "pingora-pool 0.8.1",
+ "pingora-runtime 0.8.1",
+ "pingora-timeout 0.8.1",
  "prometheus",
+ "rand 0.8.8",
+ "regex",
+ "serde",
+ "serde_yaml",
+ "sfv",
+ "socket2 0.6.5",
+ "strum",
+ "strum_macros",
+ "tokio",
+ "tokio-stream",
+ "tokio-test",
+ "unicase",
+ "windows-sys 0.59.0",
+ "zstd",
+]
+
+[[package]]
+name = "pingora-core"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fd4d1ddc6d6dbc1a97164ce13c301980c25c35422aab87b512c4c8b5123729b"
+dependencies = [
+ "ahash",
+ "async-trait",
+ "brotli",
+ "bstr",
+ "bytes",
+ "chrono",
+ "clap",
+ "daemonix",
+ "daggy",
+ "derivative",
+ "flate2",
+ "flurry",
+ "futures",
+ "h2 0.4.19",
+ "http 1.5.0",
+ "httparse",
+ "httpdate",
+ "libc",
+ "log",
+ "nix 0.31.3",
+ "once_cell",
+ "openssl-probe 0.1.6",
+ "parking_lot",
+ "percent-encoding",
+ "pingora-error 0.9.0",
+ "pingora-http 0.9.0",
+ "pingora-pool 0.9.0",
+ "pingora-runtime 0.9.0",
+ "pingora-timeout 0.9.0",
  "rand 0.8.8",
  "regex",
  "serde",
@@ -3854,6 +3973,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b23f7bc013de67e44ed902a82843f6157460b89d11da882bcc6f09f8ae380af1"
 
 [[package]]
+name = "pingora-error"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6399da6e698035093d6b458707df5f3ea5292858816b99d4b2624d96b4f567f"
+
+[[package]]
 name = "pingora-http"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3861,7 +3986,18 @@ checksum = "d553d310a15ec88107b9388a02885f798efc57764d8e9bdaaf32a76722927a10"
 dependencies = [
  "bytes",
  "http 1.5.0",
- "pingora-error",
+ "pingora-error 0.8.1",
+]
+
+[[package]]
+name = "pingora-http"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac9876e8775ebeb5d91262be4daaaf26d21a8932f53402106ed280867fe4c4f4"
+dependencies = [
+ "bytes",
+ "http 1.5.0",
+ "pingora-error 0.9.0",
 ]
 
 [[package]]
@@ -3874,8 +4010,24 @@ dependencies = [
  "log",
  "lru 0.16.4",
  "parking_lot",
- "pingora-timeout",
+ "pingora-timeout 0.8.1",
  "thread_local",
+ "tokio",
+]
+
+[[package]]
+name = "pingora-pool"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f9276b751bf2f908d24c73b8f23fcf05c2102fe373513457deb8868e17ef238"
+dependencies = [
+ "crossbeam-queue",
+ "dashmap",
+ "futures",
+ "log",
+ "lru 0.18.4",
+ "parking_lot",
+ "pingora-timeout 0.9.0",
  "tokio",
 ]
 
@@ -3892,10 +4044,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "pingora-runtime"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89aed2e58b34196682bdc2370c4293f908dece5741c56f5f5ba1018f55de68f2"
+dependencies = [
+ "log",
+ "once_cell",
+ "rand 0.8.8",
+ "serde",
+ "thread_local",
+ "tokio",
+]
+
+[[package]]
 name = "pingora-timeout"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e3e321452eaa461e0b6c5aaa35b7e42527ee89df33710279f37fae7f066b68e"
+dependencies = [
+ "once_cell",
+ "parking_lot",
+ "pin-project-lite",
+ "thread_local",
+ "tokio",
+]
+
+[[package]]
+name = "pingora-timeout"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a1dac05d3ebf3ec1be4748d7ef391c48baa886181ce0f1b564ef8fa569243e3"
 dependencies = [
  "once_cell",
  "parking_lot",
@@ -4136,7 +4315,7 @@ dependencies = [
  "once_cell",
  "socket2 0.6.5",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4532,7 +4711,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4742,6 +4921,12 @@ dependencies = [
  "core-foundation-sys",
  "libc",
 ]
+
+[[package]]
+name = "seize"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "689224d06523904ebcc9b482c6a3f4f7fb396096645c4cd10c0d2ff7371a34d3"
 
 [[package]]
 name = "semver"
@@ -5039,7 +5224,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5425,10 +5610,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6258,7 +6443,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
