@@ -30,7 +30,7 @@ tower-http = { version = "0.7", features = ["trace"] }
 opentelemetry = "0.32"
 opentelemetry_sdk = "0.32"
 opentelemetry-otlp = { version = "0.32", default-features = false, features = ["trace", "http-proto", "reqwest-blocking-client"] }
-opentelemetry-http = "0.32"
+opentelemetry-http = "0.33"
 tracing-opentelemetry = "0.33"
 
 dsdk-facet-core = "0.1.0"
