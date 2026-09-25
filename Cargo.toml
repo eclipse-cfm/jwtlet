@@ -28,7 +28,7 @@ tower-http = { version = "0.7", features = ["trace"] }
 
 # OpenTelemetry: distributed tracing + W3C context propagation over HTTP, exported via OTLP/HTTP
 opentelemetry = "0.32"
-opentelemetry_sdk = "0.32"
+opentelemetry_sdk = "0.33"
 opentelemetry-otlp = { version = "0.32", default-features = false, features = ["trace", "http-proto", "reqwest-blocking-client"] }
 opentelemetry-http = "0.32"
 tracing-opentelemetry = "0.33"
