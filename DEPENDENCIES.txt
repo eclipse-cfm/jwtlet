@@ -253,11 +253,11 @@ crate/cratesio/-/openssl-probe/0.1.6, Apache-2.0 AND MIT, approved, #16606
 crate/cratesio/-/openssl-probe/0.2.1, Apache-2.0 AND MIT AND OpenSSL AND LicenseRef-BSD-style, approved, #27067
 crate/cratesio/-/openssl-sys/0.9.117, MIT AND (Apache-2.0 AND MIT), approved, #9757
 crate/cratesio/-/openssl/0.10.81, (Apache-2.0 AND MIT), approved, #31127
-crate/cratesio/-/opentelemetry-http/0.33.0, , restricted, clearlydefined
-crate/cratesio/-/opentelemetry-otlp/0.33.0, , restricted, clearlydefined
-crate/cratesio/-/opentelemetry-proto/0.33.0, , restricted, clearlydefined
-crate/cratesio/-/opentelemetry/0.33.0, , restricted, clearlydefined
-crate/cratesio/-/opentelemetry_sdk/0.33.0, , restricted, clearlydefined
+crate/cratesio/-/opentelemetry-http/0.33.0, Apache-2.0, approved, #32023
+crate/cratesio/-/opentelemetry-otlp/0.33.0, Apache-2.0, approved, #32025
+crate/cratesio/-/opentelemetry-proto/0.33.0, Apache-2.0, approved, #32026
+crate/cratesio/-/opentelemetry/0.33.0, Apache-2.0, approved, #32027
+crate/cratesio/-/opentelemetry_sdk/0.33.0, Apache-2.0, approved, #32024
 crate/cratesio/-/ordered-multimap/0.7.3, MIT, approved, clearlydefined
 crate/cratesio/-/outref/0.5.2, MIT, approved, #18875
 crate/cratesio/-/p256/0.13.2, Apache-2.0 AND MIT AND Apache-2.0 AND MIT, approved, #22480
@@ -421,7 +421,7 @@ crate/cratesio/-/tower/0.5.3, MIT AND Apache-2.0, approved, #16671
 crate/cratesio/-/tracing-attributes/0.1.31, MIT, approved, #22260
 crate/cratesio/-/tracing-core/0.1.36, MIT, approved, #17502
 crate/cratesio/-/tracing-log/0.2.0, MIT, approved, clearlydefined
-crate/cratesio/-/tracing-opentelemetry/0.34.0, , restricted, clearlydefined
+crate/cratesio/-/tracing-opentelemetry/0.34.0, MIT, approved, #32022
 crate/cratesio/-/tracing-subscriber/0.3.23, MIT AND BSD-3-Clause AND BSD-2-Clause AND LicenseRef-Public-Domain, approved, #6670
 crate/cratesio/-/tracing/0.1.44, MIT, approved, #25125
 crate/cratesio/-/try-lock/0.2.5, MIT, approved, clearlydefined
