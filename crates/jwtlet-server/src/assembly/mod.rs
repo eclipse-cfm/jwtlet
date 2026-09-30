@@ -30,6 +30,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 use thiserror::Error;
 use tracing::warn;
 // ============================================================================
@@ -39,6 +40,9 @@ use tracing::warn;
 /// Prefix for the Vault transit key used to sign issued tokens.
 /// The full key name per participant context is `{prefix}-{pc.id}`.
 pub const DEFAULT_SIGNING_KEY_PREFIX: &str = "signing";
+
+const K8S_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+const K8S_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 // ============================================================================
 // Runtime
@@ -258,6 +262,9 @@ async fn assemble(config: &JwtletConfig, store: Arc<dyn ResourceStore>) -> Resul
         );
     }
 
+    warn_if_api_server_audience(config, "token.client_audience", &client_audience);
+    warn_if_api_server_audience(config, "management.client_audience", &management_client_audience);
+
     Ok(JwtletRuntime {
         token_service,
         resource_service: management_resource_service,
@@ -272,6 +279,23 @@ async fn assemble(config: &JwtletConfig, store: Arc<dyn ResourceStore>) -> Resul
 // ============================================================================
 // Component Helpers
 // ============================================================================
+
+/// Warns when a caller audience equals the API server's own audience. Authorization is still gated by
+/// resource mappings and `service_accounts`, but tokens bound to that audience are also valid
+/// Kubernetes API credentials, so any token presented to jwtlet could be replayed against the cluster.
+fn warn_if_api_server_audience(config: &JwtletConfig, setting: &str, audience: &str) {
+    let is_api_server_audience = [&config.k8s.cluster_issuer, &config.k8s.api_server_url]
+        .into_iter()
+        .flatten()
+        .any(|a| a.trim_end_matches('/') == audience.trim_end_matches('/'));
+    if is_api_server_audience {
+        warn!(
+            "{setting} '{audience}' is the Kubernetes API server audience — tokens presented to jwtlet \
+             are also valid Kubernetes API credentials and could be replayed against the cluster. \
+             Prefer a dedicated audience with projected service account tokens."
+        );
+    }
+}
 
 fn build_resource_service(store: Arc<dyn ResourceStore>) -> ResourceService {
     ResourceService::builder().store(store).build()
@@ -328,17 +352,21 @@ async fn create_k8s_verifier(cfg: &K8sConfig) -> Result<K8sTokenReviewVerifier, 
         .ok_or_else(|| JwtletError::Configuration("k8s.cluster_issuer is required".to_string()))?;
 
     const K8S_CA: &str = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
-    let client = if std::path::Path::new(K8S_CA).exists() {
+    // Bound every TokenReview call so a slow API server cannot pin request handlers indefinitely.
+    let mut builder = reqwest::Client::builder()
+        .connect_timeout(K8S_CONNECT_TIMEOUT)
+        .timeout(K8S_REQUEST_TIMEOUT);
+    if std::path::Path::new(K8S_CA).exists() {
         let cert_pem = std::fs::read(K8S_CA)?;
         let cert = reqwest::Certificate::from_pem(&cert_pem)
             .map_err(|e| JwtletError::Configuration(format!("Invalid cluster CA cert: {e}")))?;
-        reqwest::Client::builder()
-            .add_root_certificate(cert)
-            .build()
-            .map_err(|e| JwtletError::Configuration(format!("Failed to build HTTP client: {e}")))?
+        builder = builder.add_root_certificate(cert);
     } else {
-        reqwest::Client::new()
-    };
+        warn!("Cluster CA not found at {K8S_CA}; verifying the API server against system roots");
+    }
+    let client = builder
+        .build()
+        .map_err(|e| JwtletError::Configuration(format!("Failed to build HTTP client: {e}")))?;
 
     let mut verifier = K8sTokenReviewVerifier::builder()
         .api_server_url(api_server_url)
@@ -363,8 +391,7 @@ async fn create_vault_client(
     let token_file = match (&cfg.token_file, &cfg.token) {
         (Some(path), _) => PathBuf::from(path),
         (None, Some(token)) => {
-            let path = std::env::temp_dir().join("jwtlet_vault_token");
-            std::fs::write(&path, token)?;
+            let path = write_private_temp_file("jwtlet_vault_token", token)?;
             warn!("Using literal vault token from config — do not use in production");
             path
         }
@@ -388,4 +415,21 @@ async fn create_vault_client(
     client.initialize().await.map_err(|e| JwtletError::Vault(Box::new(e)))?;
 
     Ok(Arc::new(client))
+}
+
+/// Writes `contents` to a new, uniquely named file in the temp directory that only the current user
+/// can read. `create_new` refuses to follow a pre-planted file or symlink at that path.
+fn write_private_temp_file(prefix: &str, contents: &str) -> std::io::Result<PathBuf> {
+    use std::io::Write;
+
+    let path = std::env::temp_dir().join(format!("{prefix}-{}", uuid::Uuid::new_v4()));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(&path)?.write_all(contents.as_bytes())?;
+    Ok(path)
 }

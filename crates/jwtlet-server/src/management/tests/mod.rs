@@ -163,6 +163,35 @@ async fn create_mapping_allows_same_client_in_different_contexts() {
     assert_eq!(r2.status(), StatusCode::CREATED);
 }
 
+#[tokio::test]
+async fn create_mapping_returns_400_for_empty_client_identifier() {
+    let router = make_router();
+    let resp = post_mapping(&router, mapping_json("", "ctx1")).await;
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_mapping_returns_400_for_scope_with_whitespace() {
+    let router = make_router();
+    let mut body = mapping_json("client1", "ctx1");
+    body["scopes"] = json!(["read write"]);
+    let resp = post_mapping(&router, body).await;
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_scope_mapping_returns_409_when_scope_exists() {
+    let router = make_router();
+    post_scope(&router, scope_mapping_json("read")).await;
+
+    let response = post_scope(
+        &router,
+        scope_mapping_with_claims_json("read", json!({"role": "admin"})),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+}
+
 // ============================================================================
 // H4 — update_mapping validates path params match body
 // ============================================================================

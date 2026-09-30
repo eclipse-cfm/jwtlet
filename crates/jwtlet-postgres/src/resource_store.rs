@@ -234,15 +234,18 @@ impl ResourceStore for PostgresResourceStore {
         for mapping in &mappings {
             let claims = Value::Object(mapping.claims.clone());
 
-            sqlx::query(
-                "INSERT INTO scope_mappings (scope, claims) VALUES ($1, $2)
-                 ON CONFLICT (scope) DO UPDATE SET claims = EXCLUDED.claims",
-            )
-            .bind(&mapping.scope)
-            .bind(&claims)
-            .execute(&mut *tx)
-            .await
-            .map_err(db_error)?;
+            sqlx::query("INSERT INTO scope_mappings (scope, claims) VALUES ($1, $2)")
+                .bind(&mapping.scope)
+                .bind(&claims)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    if is_unique_violation(&e) {
+                        ResourceError::Conflict(mapping.scope.clone())
+                    } else {
+                        db_error(e)
+                    }
+                })?;
         }
 
         tx.commit().await.map_err(db_error)?;

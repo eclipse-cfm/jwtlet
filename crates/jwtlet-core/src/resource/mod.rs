@@ -18,7 +18,7 @@ use async_trait::async_trait;
 use bon::Builder;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -36,6 +36,7 @@ pub trait ResourceStore: Send + Sync {
     async fn remove_mappings_for(&self, client_identifier: &str) -> Result<(), ResourceError>;
 
     /// Persists all `mappings` atomically: either every mapping is saved or none is.
+    /// Fails with [`ResourceError::Conflict`] if any scope already exists (or repeats in the batch).
     async fn save_scope_mappings(&self, mappings: Vec<ScopeMapping>) -> Result<(), ResourceError>;
     async fn update_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError>;
     async fn remove_scope_mapping(&self, scope: &str) -> Result<(), ResourceError>;
@@ -61,13 +62,59 @@ pub enum ResourceError {
 
     #[error("Reserved JWT claim key used in scope mapping: {0}")]
     ReservedClaim(String),
+
+    #[error("Invalid mapping: {0}")]
+    InvalidMapping(String),
 }
 
-const RESERVED_CLAIMS: &[&str] = &["sub", "iss", "aud", "exp", "iat", "nbf", "act", "jti"];
+/// Claim keys that jwtlet sets authoritatively and that scope mappings may therefore not set.
+pub const RESERVED_CLAIMS: &[&str] = &["sub", "iss", "aud", "exp", "iat", "nbf", "act", "jti"];
+
+pub fn is_reserved_claim(key: &str) -> bool {
+    RESERVED_CLAIMS.contains(&key)
+}
+
+/// Scopes are requested as a whitespace-separated list, so a scope name containing whitespace
+/// (or an empty one) could never be requested and only makes the policy harder to read.
+fn validate_scope_name(scope: &str) -> Result<(), ResourceError> {
+    if scope.is_empty() || scope.chars().any(char::is_whitespace) {
+        return Err(ResourceError::InvalidMapping(format!(
+            "scope '{scope}' must be non-empty and contain no whitespace"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_resource_mapping(mapping: &ResourceMapping) -> Result<(), ResourceError> {
+    if mapping.client_identifier.trim().is_empty() {
+        return Err(ResourceError::InvalidMapping(
+            "clientIdentifier must not be empty".into(),
+        ));
+    }
+    if mapping.participant_context.trim().is_empty() {
+        return Err(ResourceError::InvalidMapping(
+            "participantContext must not be empty".into(),
+        ));
+    }
+    for scope in &mapping.scopes {
+        validate_scope_name(scope)?;
+    }
+    if mapping.audiences.iter().any(|a| a.trim().is_empty()) {
+        return Err(ResourceError::InvalidMapping(
+            "audiences must not contain empty values".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_scope_mapping(mapping: &ScopeMapping) -> Result<(), ResourceError> {
+    validate_scope_name(&mapping.scope)?;
+    validate_scope_claims(&mapping.claims)
+}
 
 fn validate_scope_claims(claims: &Map<String, Value>) -> Result<(), ResourceError> {
     for key in claims.keys() {
-        if RESERVED_CLAIMS.contains(&key.as_str()) {
+        if is_reserved_claim(key) {
             return Err(ResourceError::ReservedClaim(key.clone()));
         }
     }
@@ -120,6 +167,8 @@ impl ResourceService {
         participant_context: &str,
         scopes: Vec<String>,
     ) -> Result<VerificationResult, ResourceError> {
+        // A scope requested twice must expand only once; ordering keeps claim merging deterministic.
+        let scopes: BTreeSet<String> = scopes.into_iter().collect();
         let Some(pair) = self
             .store
             .resolve_mapping(client_identifier, participant_context)
@@ -173,10 +222,12 @@ impl ResourceService {
     }
 
     pub async fn save(&self, mapping: ResourceMapping) -> Result<(), ResourceError> {
+        validate_resource_mapping(&mapping)?;
         self.store.save_mapping(mapping).await
     }
 
     pub async fn update(&self, mapping: ResourceMapping) -> Result<(), ResourceError> {
+        validate_resource_mapping(&mapping)?;
         self.store.update_mapping(mapping).await
     }
 
@@ -189,16 +240,16 @@ impl ResourceService {
     }
 
     /// Validates and persists all `mappings` atomically. If any mapping fails
-    /// validation, none is persisted.
+    /// validation, or any scope already exists, none is persisted.
     pub async fn save_scope_mappings(&self, mappings: Vec<ScopeMapping>) -> Result<(), ResourceError> {
         for mapping in &mappings {
-            validate_scope_claims(&mapping.claims)?;
+            validate_scope_mapping(mapping)?;
         }
         self.store.save_scope_mappings(mappings).await
     }
 
     pub async fn update_scope_mapping(&self, mapping: ScopeMapping) -> Result<(), ResourceError> {
-        validate_scope_claims(&mapping.claims)?;
+        validate_scope_mapping(&mapping)?;
         self.store.update_scope_mapping(mapping).await
     }
 

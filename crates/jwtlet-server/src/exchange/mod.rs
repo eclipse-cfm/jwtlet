@@ -24,6 +24,7 @@ use axum::{
 use dsdk_facet_core::jwt::JwkSetProvider;
 use jwtlet_core::token::TokenExchangeService;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 const TOKEN_EXCHANGE_GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:token-exchange";
@@ -73,16 +74,22 @@ pub async fn token_exchange(
         return Err(ExchangeApiError::UnsupportedTokenType(form.subject_token_type));
     }
 
-    let scopes: Vec<String> = form
+    let scopes: BTreeSet<String> = form
         .scope
         .as_deref()
         .unwrap_or("")
         .split_whitespace()
         .map(str::to_string)
         .collect();
+    let granted_scope = (!scopes.is_empty()).then(|| scopes.iter().cloned().collect::<Vec<_>>().join(" "));
 
     let token = service
-        .exchange_token(&form.resource, scopes, &form.subject_token, form.audience)
+        .exchange_token(
+            &form.resource,
+            scopes.into_iter().collect(),
+            &form.subject_token,
+            form.audience,
+        )
         .await?;
 
     Ok((
@@ -92,7 +99,7 @@ pub async fn token_exchange(
             issued_token_type: ISSUED_TOKEN_TYPE,
             token_type: "Bearer",
             expires_in: service.token_ttl_secs(),
-            scope: form.scope,
+            scope: granted_scope,
         }),
     ))
 }

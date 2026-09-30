@@ -2953,7 +2953,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-core"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "bon",
@@ -2972,7 +2972,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-e2e-tests"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "dsdk-facet-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2987,7 +2987,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-postgres"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "jwtlet-core",
@@ -3000,7 +3000,7 @@ dependencies = [
 
 [[package]]
 name = "jwtlet-server"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3032,6 +3032,7 @@ dependencies = [
  "tracing-opentelemetry",
  "tracing-subscriber",
  "tracing-test",
+ "uuid",
 ]
 
 [[package]]

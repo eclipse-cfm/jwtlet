@@ -19,8 +19,11 @@ data:
     cluster_issuer  = "https://kubernetes.default.svc.cluster.local"
 
     [token]
-    client_audience = "https://kubernetes.default.svc.cluster.local"
+    client_audience = "jwtlet-exchange"
     audience        = "jwtlet-e2e"
+
+    [management]
+    client_audience = "jwtlet-management"
 
     [vault]
     url        = "http://vault:8200"

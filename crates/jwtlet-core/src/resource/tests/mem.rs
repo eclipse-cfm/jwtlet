@@ -218,3 +218,28 @@ async fn save_mapping_allows_same_client_in_different_contexts() {
     assert!(store.resolve_mapping("client1", "ctx1").await.unwrap().is_some());
     assert!(store.resolve_mapping("client1", "ctx2").await.unwrap().is_some());
 }
+
+#[tokio::test]
+async fn save_scope_mappings_returns_conflict_for_existing_scope() {
+    let store = MemoryResourceStore::new();
+    store.save_scope_mappings(vec![scope_mapping("read")]).await.unwrap();
+
+    let result = store
+        .save_scope_mappings(vec![scope_mapping("write"), scope_mapping("read")])
+        .await;
+    assert!(matches!(result, Err(ResourceError::Conflict(ref s)) if s == "read"));
+
+    // The batch is atomic: "write" must not have been persisted.
+    let scopes = store.list_scope_mappings().await.unwrap();
+    assert_eq!(scopes.len(), 1);
+}
+
+#[tokio::test]
+async fn save_scope_mappings_returns_conflict_for_duplicate_in_batch() {
+    let store = MemoryResourceStore::new();
+    let result = store
+        .save_scope_mappings(vec![scope_mapping("read"), scope_mapping("read")])
+        .await;
+    assert!(matches!(result, Err(ResourceError::Conflict(_))));
+    assert!(store.list_scope_mappings().await.unwrap().is_empty());
+}

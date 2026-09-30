@@ -407,6 +407,122 @@ async fn exchange_token_unauthorized_audience_does_not_leak_token() {
 }
 
 // ============================================================================
+// Claim hardening
+// ============================================================================
+
+fn scope_mapping(scope: &str, claims: serde_json::Value) -> (String, ScopeMapping) {
+    let Value::Object(claims) = claims else {
+        panic!("claims must be an object")
+    };
+    (
+        scope.to_string(),
+        ScopeMapping::builder().scope(scope.to_string()).claims(claims).build(),
+    )
+}
+
+async fn exchange_capturing(store: StubStore, scopes: &[&str]) -> TokenClaims {
+    let sink = Arc::new(Mutex::new(None));
+    make_service(ok_verifier(), capturing_generator(Arc::clone(&sink)), store)
+        .exchange_token(
+            PARTICIPANT_CONTEXT,
+            scopes.iter().map(|s| s.to_string()).collect(),
+            "input-token",
+            None,
+        )
+        .await
+        .unwrap();
+    sink.lock().unwrap().take().unwrap()
+}
+
+#[tokio::test]
+async fn exchange_token_drops_reserved_claims_stored_outside_the_service() {
+    // Simulates rows written directly to the store, bypassing write-time validation.
+    let scope_mappings = HashMap::from([scope_mapping(
+        "read",
+        serde_json::json!({
+            "sub": "other-context",
+            "aud": "https://evil.example.com",
+            "act": {"sub": "forged"},
+            "jti": "fixed",
+            "scope": "api:read",
+            "role": "reader"
+        }),
+    )]);
+
+    let claims = exchange_capturing(mapping_store_with_scopes(mapping(&["read"]), scope_mappings), &["read"]).await;
+
+    assert_eq!(claims.sub, PARTICIPANT_CONTEXT);
+    assert_eq!(claims.aud, TOKEN_AUDIENCE);
+    assert!(!claims.custom.contains_key("sub"));
+    assert!(!claims.custom.contains_key("aud"));
+    assert_eq!(claims.custom["scope"], "api:read");
+    assert_eq!(claims.custom["act"]["sub"], CLIENT_SUB);
+    assert_ne!(claims.custom["jti"], "fixed");
+    assert_eq!(claims.custom["role"], "reader");
+
+    // The serialized payload must not carry duplicate registered claims.
+    let payload = serde_json::to_string(&claims).unwrap();
+    assert_eq!(
+        payload.matches("\"sub\":").count(),
+        2,
+        "top-level sub + act.sub only: {payload}"
+    );
+    assert_eq!(payload.matches("\"aud\":").count(), 1, "{payload}");
+}
+
+#[tokio::test]
+async fn exchange_token_issues_unique_jti() {
+    let first = exchange_capturing(mapping_store(mapping(&["read"])), &["read"]).await;
+    let second = exchange_capturing(mapping_store(mapping(&["read"])), &["read"]).await;
+
+    let first_jti = first.custom["jti"].as_str().unwrap();
+    let second_jti = second.custom["jti"].as_str().unwrap();
+    assert!(uuid::Uuid::parse_str(first_jti).is_ok());
+    assert_ne!(first_jti, second_jti);
+}
+
+#[tokio::test]
+async fn exchange_token_expands_duplicate_scopes_once() {
+    let scope_mappings = HashMap::from([
+        scope_mapping("read", serde_json::json!({"perm": "read", "level": 1})),
+        scope_mapping("write", serde_json::json!({"perm": "write"})),
+    ]);
+
+    let claims = exchange_capturing(
+        mapping_store_with_scopes(mapping(&["read", "write"]), scope_mappings),
+        &["write", "read", "read"],
+    )
+    .await;
+
+    // Non-string claims would conflict and string claims would repeat if "read" expanded twice.
+    assert_eq!(claims.custom["level"], 1);
+    assert_eq!(claims.custom["perm"], "read write");
+}
+
+#[tokio::test]
+async fn exchange_token_records_k8s_uid_in_actor_claim() {
+    let verifier = StubVerifier(Box::new(|| {
+        let mut claims = client_claims();
+        claims
+            .custom
+            .insert(crate::k8s::K8S_UID_CLAIM.to_string(), "uid-123".into());
+        Ok(claims)
+    }));
+    let sink = Arc::new(Mutex::new(None));
+    make_service(
+        verifier,
+        capturing_generator(Arc::clone(&sink)),
+        mapping_store(mapping(&["read"])),
+    )
+    .exchange_token(PARTICIPANT_CONTEXT, vec!["read".to_string()], "input-token", None)
+    .await
+    .unwrap();
+
+    let claims = sink.lock().unwrap().take().unwrap();
+    assert_eq!(claims.custom["act"][crate::k8s::K8S_UID_CLAIM], "uid-123");
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 

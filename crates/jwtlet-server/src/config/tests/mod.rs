@@ -14,8 +14,8 @@
 
 use crate::config::{
     DEFAULT_BIND_ADDRESS, DEFAULT_MANAGEMENT_PORT, DEFAULT_PARTICIPANT_CONTEXT_CLAIM, DEFAULT_SA_TOKEN_FILE,
-    DEFAULT_TOKEN_EXCHANGE_PORT, DEFAULT_TOKEN_TTL_SECS, JwtletConfig, K8sConfig, PostgresPoolConfig, StorageBackend,
-    TokenConfig, ValidationError, VaultConfig,
+    DEFAULT_TOKEN_EXCHANGE_PORT, DEFAULT_TOKEN_TTL_SECS, JwtletConfig, K8sConfig, MAX_TOKEN_TTL_SECS, ManagementConfig,
+    PostgresPoolConfig, StorageBackend, TokenConfig, ValidationError, VaultConfig,
 };
 use std::time::Duration;
 
@@ -32,7 +32,7 @@ fn valid_config() -> JwtletConfig {
             token_file: DEFAULT_SA_TOKEN_FILE.to_string(),
         },
         token: TokenConfig {
-            client_audience: Some("https://kubernetes.default.svc.cluster.local".to_string()),
+            client_audience: Some("jwtlet-exchange".to_string()),
             audience: Some("https://my-service.example.com".to_string()),
             participant_context_claim: DEFAULT_PARTICIPANT_CONTEXT_CLAIM.to_string(),
             token_ttl_secs: DEFAULT_TOKEN_TTL_SECS,
@@ -43,7 +43,9 @@ fn valid_config() -> JwtletConfig {
             token_file: None,
         },
         service_accounts: Default::default(),
-        management: Default::default(),
+        management: ManagementConfig {
+            client_audience: Some("jwtlet-management".to_string()),
+        },
     }
 }
 
@@ -397,4 +399,40 @@ fn validation_error_display_includes_all_messages() {
     assert!(display.contains("first error"));
     assert!(display.contains("second error"));
     assert!(display.contains('2'.to_string().as_str()));
+}
+
+#[test]
+fn validate_accepts_missing_management_client_audience() {
+    // Falls back to token.client_audience at assembly time; only a warning is logged.
+    let mut cfg = valid_config();
+    cfg.management.client_audience = None;
+    assert!(cfg.validate().is_ok());
+}
+
+#[test]
+fn validate_accepts_management_audience_equal_to_exchange_audience() {
+    let mut cfg = valid_config();
+    cfg.management.client_audience = cfg.token.client_audience.clone();
+    assert!(cfg.validate().is_ok());
+}
+
+#[test]
+fn validate_fails_when_token_ttl_exceeds_maximum() {
+    let mut cfg = valid_config();
+    cfg.token.token_ttl_secs = MAX_TOKEN_TTL_SECS + 1;
+    assert_error_contains(&cfg, "token.token_ttl_secs must not exceed");
+}
+
+#[test]
+fn validate_accepts_token_ttl_at_maximum() {
+    let mut cfg = valid_config();
+    cfg.token.token_ttl_secs = MAX_TOKEN_TTL_SECS;
+    assert!(cfg.validate().is_ok());
+}
+
+#[test]
+fn validate_fails_when_k8s_api_server_url_is_not_https() {
+    let mut cfg = valid_config();
+    cfg.k8s.api_server_url = Some("http://kubernetes.default.svc".to_string());
+    assert_error_contains(&cfg, "k8s.api_server_url must use https");
 }
