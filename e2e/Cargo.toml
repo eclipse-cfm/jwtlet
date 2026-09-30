@@ -8,7 +8,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 dsdk-facet-core = { workspace = true, features = ["test-fixtures"] }
-dsdk-facet-e2e-tests = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", branch = "main" }
+dsdk-facet-e2e-tests = { git = "https://github.com/eclipse-dataplane-core/dsdk-facet-rs", tag = "dsdk-facet-core-v0.1.1" }
 dsdk-facet-hashicorp-vault = { workspace = true }
 jsonwebtoken = { workspace = true }
 reqwest = { workspace = true }

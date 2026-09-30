@@ -20,6 +20,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
 dependencies = [
  "cfg-if",
+ "const-random",
  "getrandom 0.3.4",
  "once_cell",
  "version_check",
@@ -345,7 +346,7 @@ dependencies = [
  "http 0.2.12",
  "http 1.5.0",
  "http-body 1.1.0",
- "lru 0.18.4",
+ "lru",
  "percent-encoding",
  "regex-lite",
  "sha2 0.11.0",
@@ -883,7 +884,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serde_urlencoded",
- "thiserror 2.0.20",
+ "thiserror",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -1378,10 +1379,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "daemonize"
-version = "0.5.0"
+name = "daemonix"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab8bfdaacb3c887a54d41bdf48d3af8873b3f5566469f8ba21b92057509f116e"
+checksum = "f0b747381562a10fd2104e9333ad72fe5158d79de81b64426fc9e229c6d3fb38"
 dependencies = [
  "libc",
 ]
@@ -1430,6 +1431,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "5.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
+dependencies = [
+ "cfg-if",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
+]
+
+[[package]]
 name = "deadpool"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1475,7 +1489,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10d60334b3b2e7c9d91ef8150abfb6fa4c1c39ebbcf4a81c2e346aad939fee3e"
 dependencies = [
- "thiserror 2.0.20",
+ "thiserror",
 ]
 
 [[package]]
@@ -1572,41 +1586,9 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
 name = "dsdk-facet-core"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "531152960c8d5030e73c868e385967ed09677808a5541e672cabae5fc0d931f0"
-dependencies = [
- "async-trait",
- "base64 0.22.1",
- "bon",
- "bs58",
- "chrono",
- "ed25519-dalek",
- "hex",
- "hmac 0.12.1",
- "http 1.5.0",
- "jsonwebtoken 10.4.0",
- "log",
- "pingora",
- "pkcs8",
- "rand 0.9.5",
- "regex",
- "reqwest 0.12.28",
- "rsa",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sodiumoxide",
- "thiserror 2.0.20",
- "tokio",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "dsdk-facet-core"
-version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+checksum = "4287b827c2f83a0825836ff323481e590f5beda664059c9d8de0dd1414127f9f"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -1617,7 +1599,7 @@ dependencies = [
  "hex",
  "hmac 0.13.0",
  "http 1.5.0",
- "jsonwebtoken 11.1.0",
+ "jsonwebtoken",
  "log",
  "pingora",
  "pkcs8",
@@ -1629,7 +1611,39 @@ dependencies = [
  "serde_json",
  "sha2 0.11.0",
  "sodiumoxide",
- "thiserror 2.0.20",
+ "thiserror",
+ "tokio",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "dsdk-facet-core"
+version = "0.1.1"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1#91d9e37055ecddef9e61f2e7ded129c15a73d381"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "bon",
+ "bs58",
+ "chrono",
+ "ed25519-dalek",
+ "hex",
+ "hmac 0.13.0",
+ "http 1.5.0",
+ "jsonwebtoken",
+ "log",
+ "pingora",
+ "pkcs8",
+ "rand 0.10.2",
+ "regex",
+ "reqwest 0.12.28",
+ "rsa",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "sodiumoxide",
+ "thiserror",
  "tokio",
  "url",
  "uuid",
@@ -1637,15 +1651,15 @@ dependencies = [
 
 [[package]]
 name = "dsdk-facet-e2e-tests"
-version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+version = "0.1.1"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1#91d9e37055ecddef9e61f2e7ded129c15a73d381"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
- "dsdk-facet-core 0.1.0 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main)",
- "dsdk-facet-hashicorp-vault 0.1.0 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main)",
+ "dsdk-facet-core 0.1.1 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1)",
+ "dsdk-facet-hashicorp-vault 0.1.1 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1)",
  "dsdk-facet-testcontainers",
- "jsonwebtoken 11.1.0",
+ "jsonwebtoken",
  "reqwest 0.12.28",
  "serde_json",
  "tokio",
@@ -1654,19 +1668,19 @@ dependencies = [
 
 [[package]]
 name = "dsdk-facet-hashicorp-vault"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bcd8e7edda2ebecf123d83df92649ddd9443e2252116bc35fa70bcc62a0d409"
+checksum = "46569cdbb5f280681314a192ee78a90143629951e78d027c68fce5e4cc929678"
 dependencies = [
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.1",
  "bon",
  "bs58",
  "chrono",
- "dsdk-facet-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dsdk-facet-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "notify",
- "rand 0.9.5",
+ "rand 0.10.2",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -1675,15 +1689,15 @@ dependencies = [
 
 [[package]]
 name = "dsdk-facet-hashicorp-vault"
-version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+version = "0.1.1"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1#91d9e37055ecddef9e61f2e7ded129c15a73d381"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
  "bon",
  "bs58",
  "chrono",
- "dsdk-facet-core 0.1.0 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main)",
+ "dsdk-facet-core 0.1.1 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1)",
  "log",
  "notify",
  "rand 0.10.2",
@@ -1695,15 +1709,15 @@ dependencies = [
 
 [[package]]
 name = "dsdk-facet-postgres"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "469c556033cb765f9a703be342c58f788a0aaec6cff1743204ff86e19d95ef65"
+checksum = "4383adc0cd83a2104b786ac77bab378a9b48d7b062cca09c71a6577d8256583f"
 dependencies = [
  "async-trait",
  "bon",
  "chrono",
- "dsdk-facet-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.9.5",
+ "dsdk-facet-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.10.2",
  "serde",
  "serde_json",
  "sqlx",
@@ -1711,8 +1725,8 @@ dependencies = [
 
 [[package]]
 name = "dsdk-facet-testcontainers"
-version = "0.1.0"
-source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?branch=main#fc795b1f23e9bea2604f3b40f3668405fa4857e3"
+version = "0.1.1"
+source = "git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1#91d9e37055ecddef9e61f2e7ded129c15a73d381"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
@@ -1964,6 +1978,18 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "spin 0.9.9",
+]
+
+[[package]]
+name = "flurry"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf5efcf77a4da27927d3ab0509dec5b0954bb3bc59da5a1de9e52642ebd4cdf9"
+dependencies = [
+ "ahash",
+ "num_cpus",
+ "parking_lot",
+ "seize",
 ]
 
 [[package]]
@@ -2262,8 +2288,6 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 dependencies = [
- "allocator-api2",
- "equivalent",
  "foldhash 0.2.0",
 ]
 
@@ -2905,30 +2929,6 @@ dependencies = [
 
 [[package]]
 name = "jsonwebtoken"
-version = "10.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eba32bfb4ffdeaca3e34431072faf01745c9b26d25504aa7a6cf5684334fc4fc"
-dependencies = [
- "base64 0.22.1",
- "ed25519-dalek",
- "getrandom 0.2.17",
- "hmac 0.12.1",
- "js-sys",
- "p256",
- "p384",
- "pem",
- "rand 0.8.8",
- "rsa",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "signature 2.2.0",
- "simple_asn1",
- "zeroize",
-]
-
-[[package]]
-name = "jsonwebtoken"
 version = "11.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e75fe14a82d81e5f5af639997db37d8b96045938a7ac6ab18cdbe1c7467e05e1"
@@ -2958,12 +2958,12 @@ dependencies = [
  "async-trait",
  "bon",
  "chrono",
- "dsdk-facet-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dsdk-facet-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "notify",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
- "thiserror 2.0.20",
+ "thiserror",
  "tokio",
  "tracing",
  "uuid",
@@ -2975,10 +2975,10 @@ name = "jwtlet-e2e-tests"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "dsdk-facet-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dsdk-facet-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "dsdk-facet-e2e-tests",
- "dsdk-facet-hashicorp-vault 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jsonwebtoken 11.1.0",
+ "dsdk-facet-hashicorp-vault 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonwebtoken",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -3007,8 +3007,8 @@ dependencies = [
  "axum",
  "bon",
  "config",
- "dsdk-facet-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dsdk-facet-hashicorp-vault 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dsdk-facet-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dsdk-facet-hashicorp-vault 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "dsdk-facet-postgres",
  "humantime-serde",
  "jwtlet-core",
@@ -3022,7 +3022,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "thiserror 2.0.20",
+ "thiserror",
  "tokio",
  "tokio-test",
  "tokio-util",
@@ -3148,15 +3148,6 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "lru"
-version = "0.16.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b7919ef39"
-dependencies = [
- "hashbrown 0.16.1",
-]
-
-[[package]]
-name = "lru"
 version = "0.18.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff9840bcc50b71349309900da0ce7279aa336ae71d73250b07998932c7d97c25"
@@ -3213,9 +3204,9 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "memoffset"
-version = "0.6.5"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
+checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
 ]
@@ -3284,12 +3275,13 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.24.3"
+version = "0.31.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa52e972a9a719cecb6864fb88568781eb706bac2cd1d4f04a648542dbf78069"
+checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.13.2",
  "cfg-if",
+ "cfg_aliases",
  "libc",
  "memoffset",
 ]
@@ -3506,7 +3498,7 @@ dependencies = [
  "futures-sink",
  "js-sys",
  "pin-project-lite",
- "thiserror 2.0.20",
+ "thiserror",
  "tracing",
 ]
 
@@ -3537,7 +3529,7 @@ dependencies = [
  "opentelemetry_sdk",
  "prost",
  "reqwest 0.13.5",
- "thiserror 2.0.20",
+ "thiserror",
 ]
 
 [[package]]
@@ -3564,7 +3556,7 @@ dependencies = [
  "percent-encoding",
  "portable-atomic",
  "rand 0.9.5",
- "thiserror 2.0.20",
+ "thiserror",
 ]
 
 [[package]]
@@ -3788,9 +3780,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pingora"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54a75f2ff8e122aa80ab202dc865294fe59cd856c2a5dab2d3df6e122c93b941"
+checksum = "fc02712a3847828d6b798ecf31f0ac64e138df26b9513e20d52319cf3cecd11e"
 dependencies = [
  "pingora-core",
  "pingora-http",
@@ -3799,9 +3791,9 @@ dependencies = [
 
 [[package]]
 name = "pingora-core"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a7ffe2f5acf9f94fd255cfd1438866bc9124f8f0c7d42562bd3f853df2094b7"
+checksum = "7fd4d1ddc6d6dbc1a97164ce13c301980c25c35422aab87b512c4c8b5123729b"
 dependencies = [
  "ahash",
  "async-trait",
@@ -3810,10 +3802,11 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
- "daemonize",
+ "daemonix",
  "daggy",
  "derivative",
  "flate2",
+ "flurry",
  "futures",
  "h2 0.4.19",
  "http 1.5.0",
@@ -3831,7 +3824,6 @@ dependencies = [
  "pingora-pool",
  "pingora-runtime",
  "pingora-timeout",
- "prometheus",
  "rand 0.8.8",
  "regex",
  "serde",
@@ -3850,15 +3842,15 @@ dependencies = [
 
 [[package]]
 name = "pingora-error"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b23f7bc013de67e44ed902a82843f6157460b89d11da882bcc6f09f8ae380af1"
+checksum = "b6399da6e698035093d6b458707df5f3ea5292858816b99d4b2624d96b4f567f"
 
 [[package]]
 name = "pingora-http"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d553d310a15ec88107b9388a02885f798efc57764d8e9bdaaf32a76722927a10"
+checksum = "ac9876e8775ebeb5d91262be4daaaf26d21a8932f53402106ed280867fe4c4f4"
 dependencies = [
  "bytes",
  "http 1.5.0",
@@ -3867,36 +3859,39 @@ dependencies = [
 
 [[package]]
 name = "pingora-pool"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "feb1237893b15a9cf6b371bee8d7e2e1c10742e4be6eb00ed38cfe87fd1363f8"
+checksum = "0f9276b751bf2f908d24c73b8f23fcf05c2102fe373513457deb8868e17ef238"
 dependencies = [
  "crossbeam-queue",
+ "dashmap",
+ "futures",
  "log",
- "lru 0.16.4",
+ "lru",
  "parking_lot",
  "pingora-timeout",
- "thread_local",
  "tokio",
 ]
 
 [[package]]
 name = "pingora-runtime"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41815a13691a3e7d9ad0e34767d4140284132e31b95a4481f5e73ab6f407f834"
+checksum = "89aed2e58b34196682bdc2370c4293f908dece5741c56f5f5ba1018f55de68f2"
 dependencies = [
+ "log",
  "once_cell",
  "rand 0.8.8",
+ "serde",
  "thread_local",
  "tokio",
 ]
 
 [[package]]
 name = "pingora-timeout"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e3e321452eaa461e0b6c5aaa35b7e42527ee89df33710279f37fae7f066b68e"
+checksum = "8a1dac05d3ebf3ec1be4748d7ef391c48baa886181ce0f1b564ef8fa569243e3"
 dependencies = [
  "once_cell",
  "parking_lot",
@@ -4032,21 +4027,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prometheus"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d33c28a30771f7f96db69893f78b857f7450d7e0237e9c8fc6427a81bae7ed1"
-dependencies = [
- "cfg-if",
- "fnv",
- "lazy_static",
- "memchr",
- "parking_lot",
- "protobuf",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "prost"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4079,12 +4059,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "2.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
-
-[[package]]
 name = "quinn"
 version = "0.11.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4098,7 +4072,7 @@ dependencies = [
  "rustc-hash",
  "rustls 0.23.45",
  "socket2 0.6.5",
- "thiserror 2.0.20",
+ "thiserror",
  "tokio",
  "tracing",
  "web-time",
@@ -4120,7 +4094,7 @@ dependencies = [
  "rustls 0.23.45",
  "rustls-pki-types",
  "slab",
- "thiserror 2.0.20",
+ "thiserror",
  "tinyvec",
  "tracing",
  "web-time",
@@ -4745,6 +4719,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "seize"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "689224d06523904ebcc9b482c6a3f4f7fb396096645c4cd10c0d2ff7371a34d3"
+
+[[package]]
 name = "semver"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5004,7 +4984,7 @@ checksum = "0d585997b0ac10be3c5ee635f1bab02d512760d14b7c468801ac8a01d9ae5f1d"
 dependencies = [
  "num-bigint",
  "num-traits",
- "thiserror 2.0.20",
+ "thiserror",
  "time",
 ]
 
@@ -5122,7 +5102,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "smallvec",
- "thiserror 2.0.20",
+ "thiserror",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -5206,7 +5186,7 @@ dependencies = [
  "smallvec",
  "sqlx-core",
  "stringprep",
- "thiserror 2.0.20",
+ "thiserror",
  "tracing",
  "whoami",
 ]
@@ -5244,7 +5224,7 @@ dependencies = [
  "smallvec",
  "sqlx-core",
  "stringprep",
- "thiserror 2.0.20",
+ "thiserror",
  "tracing",
  "whoami",
 ]
@@ -5269,7 +5249,7 @@ dependencies = [
  "serde",
  "serde_urlencoded",
  "sqlx-core",
- "thiserror 2.0.20",
+ "thiserror",
  "tracing",
  "url",
 ]
@@ -5456,7 +5436,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "thiserror 2.0.20",
+ "thiserror",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -5474,31 +5454,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
-dependencies = [
- "thiserror-impl 1.0.69",
-]
-
-[[package]]
-name = "thiserror"
 version = "2.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec86235f5fcc2a73650310756d2ac5b138a5780bbbdfae3eeccec992c435ba4f"
 dependencies = [
- "thiserror-impl 2.0.20",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
+ "thiserror-impl",
 ]
 
 [[package]]

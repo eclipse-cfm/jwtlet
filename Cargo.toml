@@ -33,9 +33,9 @@ opentelemetry-otlp = { version = "0.33", default-features = false, features = ["
 opentelemetry-http = "0.33"
 tracing-opentelemetry = "0.34"
 
-dsdk-facet-core = "0.1.0"
-dsdk-facet-postgres = "0.1.0"
-dsdk-facet-hashicorp-vault = "0.1.0"
+dsdk-facet-core = "0.1.1"
+dsdk-facet-postgres = "0.1.1"
+dsdk-facet-hashicorp-vault = "0.1.1"
 
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "json"] }
 
