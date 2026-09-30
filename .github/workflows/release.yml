@@ -5,6 +5,15 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+-*"
+  # Manual re-run on an existing tag (pick the tag under "Use workflow from"). Dispatching with
+  # `strict: false` downgrades the dependency license gate to a warning, to force a release while
+  # Eclipse IP reviews are still pending. Tag pushes are always strict.
+  workflow_dispatch:
+    inputs:
+      strict:
+        description: "Fail if any dependency is restricted/rejected by Eclipse Dash (uncheck to only warn)"
+        type: boolean
+        default: true
 
 concurrency:
   group: release-${{ github.ref }}
@@ -29,6 +38,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "::error::Releases must run on a tag, got $GITHUB_REF_TYPE $GITHUB_REF_NAME"
+            exit 1
+          fi
           version="${GITHUB_REF_NAME#v}"
           base="${version%%-*}"
           manifest="$(grep -m1 -E '^version = ' Cargo.toml | sed -E 's/^version = "(.*)"/\1/')"
@@ -48,8 +61,8 @@ jobs:
 
   # Gate: the image ships every dependency, so all of them must be vetted by the Eclipse IP Team.
   # Runs the Eclipse Dash License Tool (scripts/check-dependencies.sh) and fails on any restricted
-  # or rejected dependency. Nothing is committed here; regenerate DEPENDENCIES.txt with the same
-  # script when dependencies change.
+  # or rejected dependency (only a warning when dispatched with `strict: false`). Nothing is
+  # committed here; regenerate DEPENDENCIES.txt with the same script when dependencies change.
   licenses:
     name: Check dependency licenses
     needs: verify
@@ -72,6 +85,8 @@ jobs:
 
       - name: Check dependency licenses (Eclipse Dash)
         run: scripts/check-dependencies.sh
+        env:
+          DASH_STRICT: ${{ github.event_name != 'workflow_dispatch' || inputs.strict }}
 
   publish-image:
     name: Publish image
