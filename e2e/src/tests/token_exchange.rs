@@ -18,7 +18,9 @@ use serde_json::{Value, json};
 const PARTICIPANT_CONTEXT: &str = "test-context";
 const SA_NAME: &str = "test-app-sa";
 // subject_token audience must match jwtlet's token.client_audience config
-const CLIENT_AUDIENCE: &str = "https://kubernetes.default.svc.cluster.local";
+const CLIENT_AUDIENCE: &str = "jwtlet-exchange";
+// management bearer token audience must match jwtlet's management.client_audience config
+const MGMT_AUDIENCE: &str = "jwtlet-management";
 // issued token audience, matches token.audience in jwtlet-config.yaml
 const TOKEN_AUDIENCE: &str = "jwtlet-e2e";
 
@@ -51,7 +53,7 @@ async fn test_token_exchange() -> anyhow::Result<()> {
     let client_identifier = format!("system:serviceaccount:{namespace}:{SA_NAME}");
 
     // Get a management SA token for the management API caller
-    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, CLIENT_AUDIENCE)?;
+    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, MGMT_AUDIENCE)?;
 
     // Register the SA -> participant context mapping with an audience allowlist
     let mapping = json!({
@@ -118,7 +120,7 @@ async fn test_token_exchange_with_scope_mapping() -> anyhow::Result<()> {
     let client_identifier = format!("system:serviceaccount:{namespace}:{SA_NAME}");
 
     // Get a management SA token for the management API caller
-    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, CLIENT_AUDIENCE)?;
+    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, MGMT_AUDIENCE)?;
 
     // Register the SA -> participant context mapping with an audience allowlist
     let resource_mapping = json!({
@@ -225,7 +227,7 @@ async fn test_token_exchange_audience_not_in_allowlist() -> anyhow::Result<()> {
     let client_identifier = format!("system:serviceaccount:{namespace}:{SA_NAME}");
 
     // Ensure the mapping exists with a restricted audience allowlist
-    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, CLIENT_AUDIENCE)?;
+    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, MGMT_AUDIENCE)?;
     let mapping = json!({
         "clientIdentifier": client_identifier,
         "participantContext": PARTICIPANT_CONTEXT,
@@ -302,7 +304,7 @@ async fn test_token_jwks_verification() -> anyhow::Result<()> {
     let client_identifier = format!("system:serviceaccount:{namespace}:{SA_NAME}");
 
     // Register the SA -> participant context mapping (idempotent — may already exist from another test)
-    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, CLIENT_AUDIENCE)?;
+    let mgmt_token = crate::utils::create_service_account_token(SA_NAME, namespace, MGMT_AUDIENCE)?;
     let mapping = json!({
         "clientIdentifier": client_identifier,
         "participantContext": PARTICIPANT_CONTEXT,

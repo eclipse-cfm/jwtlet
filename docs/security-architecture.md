@@ -89,14 +89,27 @@ and `iss` (the cluster OIDC issuer URL). These are the authoritative inputs to t
 pipeline; no claim from the incoming token is trusted directly.
 
 **Audience binding.** The SA token must be projected with the audience matching
-`token.client_audience`. TokenReview will reject tokens not bound to this audience. This
-prevents replay of SA tokens against other services in the cluster.
+`token.client_audience`. Jwtlet additionally requires the TokenReview response's
+`status.audiences` to contain the requested audience: authenticators that are not
+audience-aware may report a token as authenticated without honoring the requested
+audience. This prevents replay of SA tokens against other services in the cluster.
+`token.client_audience` should be a dedicated value rather than the API server's own
+audience: tokens bound to that audience are also valid Kubernetes API credentials, so a
+token presented to Jwtlet could be replayed against the cluster (Jwtlet warns at startup
+if it is).
+
+**Service accounts only.** Jwtlet accepts only Kubernetes service account identities:
+the TokenReview user must have a `system:serviceaccount:` username and belong to the
+`system:serviceaccounts` group. Identities from other API server authenticators (OIDC
+users, static or bootstrap tokens) are rejected. The SA's UID, when returned, is recorded
+in the issued token's `act.k8s_uid` claim.
 
 **Management API identity.** The management API uses a separate `management.client_audience`
 value. When configured, management callers must present SA tokens bound to that distinct
 audience, providing cryptographic separation between exchange callers and management callers.
 If `management.client_audience` is absent, it falls back to `token.client_audience` — a
-configuration Jwtlet warns about at startup.
+configuration Jwtlet warns about at startup. Access is then gated only by the
+`service_accounts` role list.
 
 ---
 
@@ -172,7 +185,13 @@ sub  iss  aud  exp  iat  nbf  act  jti
 ```
 
 These claims are set authoritatively by Jwtlet during token generation and cannot be
-overridden by scope expansion.
+overridden by scope expansion. The denylist is enforced twice: when scope mappings are
+written, and again when a token is issued, so rows written to the store by other means
+cannot inject them either.
+
+**Scope mapping creation.** `POST /api/v1/scopes` fails with `409 Conflict` if a scope
+already exists (the whole batch is rejected); existing scopes are changed with `PUT`.
+Scope names must be non-empty and contain no whitespace.
 
 **Scope claim conflict detection.** If a token exchange request includes multiple scopes whose
 mappings define the same claim key, the exchange fails with a `409 Conflict` response. Claim
@@ -213,17 +232,20 @@ allowlist — see below).
 
 ### Processing Pipeline
 
-1. **Verify SA token** — TokenReview against `token.client_audience`. Extracts `sub` and `iss`.
+1. **Verify SA token** — TokenReview against `token.client_audience`; the response must confirm
+   that audience and identify a service account. Extracts `sub`, `iss` and the SA UID.
 2. **Resolve mapping** — look up `(sub, resource)` in the resource store, where `resource` is the requested participant
    context.
-3. **Verify scopes** — all requested scopes must be present in the mapping's `scopes` set.
+3. **Verify scopes** — requested scopes are deduplicated; all of them must be present in the mapping's `scopes` set.
    Any scope not in the set returns `401 Unauthorized`.
 4. **Expand scopes to claims** — for each requested scope, merge its `ScopeMapping.claims`
    into the outgoing claims map. Duplicate claim keys across scopes return `409 Conflict`.
 5. **Resolve audience** — apply the audience allowlist logic (see below).
-6. **Build JWT claims** — assemble `sub`, `aud`, `iat`, `nbf`, `exp`, `act`, and custom claims.
+6. **Build JWT claims** — assemble `sub`, `aud`, `iat`, `nbf`, `exp`, `jti`, `act`, and custom claims
+   (reserved keys are dropped from the custom claims).
 7. **Sign via Vault** — call Vault transit `sign` operation with the configured key.
-8. **Return** — RFC 8693 response with `access_token` and `token_type=Bearer`.
+8. **Return** — RFC 8693 response with `access_token`, `token_type=Bearer` and the normalized
+   (deduplicated, sorted) `scope`.
 
 ### Audience Resolution
 
@@ -252,9 +274,11 @@ targets regardless of what the caller requests.
   "iat": 1700000000,
   "nbf": 1700000000,
   "exp": 1700003600,
+  "jti": "5f0c6f0e-8d2a-4f7e-9d7e-2b1f4c3a9e10",
   "act": {
     "sub": "system:serviceaccount:ns:sa-connector",
-    "iss": "https://kubernetes.default.svc.cluster.local"
+    "iss": "https://kubernetes.default.svc.cluster.local",
+    "k8s_uid": "0d2f6b1e-7c4a-4e59-9b3f-6a8e2c1d5f70"
   },
   "role": "connector-agent",
   "connector_id": "connector-123"
@@ -268,8 +292,9 @@ targets regardless of what the caller requests.
 | `aud`  | Resolved from request + allowlist                          |
 | `iat`  | Current time                                               |
 | `nbf`  | Current time                                               |
-| `exp`  | `iat + token_ttl_secs` (default 3600s)                     |
-| `act`  | `{sub: SA identity, iss: cluster issuer}` from TokenReview |
+| `exp`  | `iat + token_ttl_secs` (default 3600s, maximum 86400s)     |
+| `jti`  | Random UUID, unique per issued token                       |
+| `act`  | `{sub: SA identity, iss: cluster issuer, k8s_uid: SA UID}` from TokenReview |
 | *rest* | Merged from scope mapping claim expansion                  |
 
 The `act` claim implements RFC 8693 delegation semantics. It records the K8s SA that
@@ -349,12 +374,13 @@ model to be sound:
 
 1. **SA identity is always from TokenReview.** The `act.sub` and the `clientIdentifier`
    lookup key come exclusively from the TokenReview response. No claim from the incoming
-   token is used directly.
+   token is used directly. The response must confirm the requested audience and identify
+   a Kubernetes service account.
 
 2. **Scope expansion cannot override reserved claims.** The reserved claims denylist
    (`sub`, `iss`, `aud`, `exp`, `iat`, `nbf`, `act`, `jti`) is enforced at scope mapping
    write time. A scope mapping that attempts to set any of these is rejected at the
-   management API with HTTP 400.
+   management API with HTTP 400. Reserved keys are also dropped at issuance time.
 
 3. **Scopes are all-or-nothing.** The exchange fails if any single requested scope is
    not present in the mapping. Partial scope grants are not issued.
@@ -367,6 +393,7 @@ model to be sound:
    `management.client_audience` is set to a value distinct from `token.client_audience`,
    the audience binding on the SA token cryptographically separates the two caller
    populations. An exchange caller's SA token cannot be replayed against the management API.
+   Otherwise, management access is gated only by the `service_accounts` role list.
 
 6. **Claim conflicts across scopes are rejected.** If two scopes in the same exchange
    request expand to the same claim key, the exchange fails rather than silently overwriting.
@@ -391,8 +418,8 @@ services. Failure to adhere to these rules invalidates the model's guarantees.
 
 - Treat orchestrator SA credentials as CA-equivalent secrets — rotate on any suspected
   compromise, limit distribution, and audit access
-- Configure `management.client_audience` to a value distinct from `token.client_audience`
-  to enforce cryptographic separation of management and exchange callers
+- Use dedicated values for `token.client_audience` and `management.client_audience`, never
+  the Kubernetes API server audience, and issue projected SA tokens for them
 - Set `token_ttl_secs` to the shortest value consistent with operational requirements;
   3600s (the default) is too long for sensitive participant contexts
 - Enable `pgaudit` on the Postgres backend in production deployments

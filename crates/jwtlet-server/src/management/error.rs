@@ -36,6 +36,9 @@ impl IntoResponse for ManagementApiError {
                 Json(json!({"error": format!("Claim key '{key}' is reserved and cannot be set via scope mapping")})),
             )
                 .into_response(),
+            ManagementApiError::Resource(ResourceError::InvalidMapping(ref msg)) => {
+                (StatusCode::BAD_REQUEST, Json(json!({"error": msg}))).into_response()
+            }
             ManagementApiError::Resource(ResourceError::ClaimConflict(_)) => {
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }

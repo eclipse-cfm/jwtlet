@@ -324,6 +324,101 @@ async fn update_scope_mapping_rejects_reserved_claims() {
     assert!(matches!(result, Err(ResourceError::ReservedClaim(_))));
 }
 
+#[tokio::test]
+async fn save_rejects_invalid_resource_mappings() {
+    let service = create_service();
+    let with_audience = |aud: &str| {
+        let mut m = create_mapping("client", "ctx", &["read"]);
+        m.audiences = HashSet::from([aud.to_string()]);
+        m
+    };
+    let invalid = [
+        create_mapping("", "ctx", &["read"]),
+        create_mapping("  ", "ctx", &["read"]),
+        create_mapping("client", "", &["read"]),
+        create_mapping("client", "ctx", &[""]),
+        create_mapping("client", "ctx", &["read write"]),
+        with_audience(""),
+    ];
+    for mapping in invalid {
+        let result = service.save(mapping.clone()).await;
+        assert!(
+            matches!(result, Err(ResourceError::InvalidMapping(_))),
+            "expected InvalidMapping for {mapping:?}"
+        );
+    }
+    assert!(service.list_mappings().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn update_rejects_invalid_resource_mapping() {
+    let service = create_service();
+    service.save(create_mapping("client", "ctx", &["read"])).await.unwrap();
+
+    let result = service.update(create_mapping("client", "ctx", &["read write"])).await;
+    assert!(matches!(result, Err(ResourceError::InvalidMapping(_))));
+}
+
+#[tokio::test]
+async fn save_scope_mappings_rejects_invalid_scope_names() {
+    let service = create_service();
+    for scope in ["", "read write", "read\t"] {
+        let result = service
+            .save_scope_mappings(vec![
+                ScopeMapping::builder()
+                    .scope(scope.to_string())
+                    .claims(Map::new())
+                    .build(),
+            ])
+            .await;
+        assert!(
+            matches!(result, Err(ResourceError::InvalidMapping(_))),
+            "expected InvalidMapping for scope {scope:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn save_scope_mappings_returns_conflict_for_existing_scope() {
+    let service = create_service();
+    let mapping = |role: &str| {
+        let mut claims = Map::new();
+        claims.insert("role".to_string(), Value::String(role.to_string()));
+        ScopeMapping::builder().scope("read".to_string()).claims(claims).build()
+    };
+    service.save_scope_mappings(vec![mapping("reader")]).await.unwrap();
+
+    let result = service.save_scope_mappings(vec![mapping("admin")]).await;
+    assert!(matches!(result, Err(ResourceError::Conflict(_))));
+    assert_eq!(
+        service.list_scope_mappings().await.unwrap()[0].claims["role"],
+        Value::String("reader".to_string())
+    );
+}
+
+#[tokio::test]
+async fn verify_expands_duplicate_requested_scope_once() {
+    let service = create_service();
+    service.save(create_mapping("client", "ctx", &["read"])).await.unwrap();
+    let mut claims = Map::new();
+    claims.insert("perm".to_string(), Value::String("read".to_string()));
+    claims.insert("level".to_string(), Value::from(1));
+    service
+        .save_scope_mappings(vec![
+            ScopeMapping::builder().scope("read".to_string()).claims(claims).build(),
+        ])
+        .await
+        .unwrap();
+
+    let result = service
+        .verify("client", "ctx", vec!["read".to_string(), "read".to_string()])
+        .await
+        .unwrap();
+    assert!(result.verified);
+    assert_eq!(result.claims["perm"], Value::String("read".to_string()));
+    assert_eq!(result.claims["level"], Value::from(1));
+}
+
 fn create_service() -> ResourceService {
     ResourceService::builder()
         .store(Arc::new(MemoryResourceStore::new()))

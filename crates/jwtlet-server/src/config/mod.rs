@@ -32,6 +32,7 @@ pub const DEFAULT_BIND_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 pub const DEFAULT_SA_TOKEN_FILE: &str = "/var/run/secrets/kubernetes.io/serviceaccount/token";
 pub const DEFAULT_PARTICIPANT_CONTEXT_CLAIM: &str = "jwtlet_pc";
 pub const DEFAULT_TOKEN_TTL_SECS: i64 = 3600;
+pub const MAX_TOKEN_TTL_SECS: i64 = jwtlet_core::token::MAX_TOKEN_TTL_SECS;
 pub const ENV_CONFIG_FILE: &str = "JWTLET_CONFIG_FILE";
 
 /// Accepted values for `storage_backend.pool.sslmode`. Mirrors libpq / sqlx semantics.
@@ -251,10 +252,14 @@ impl JwtletConfig {
         // K8s configuration
         match &self.k8s.api_server_url {
             None => errors.push("k8s.api_server_url is required".to_string()),
-            Some(url) if url.parse::<reqwest::Url>().is_err() => {
-                errors.push(format!("k8s.api_server_url is not a valid URL: '{url}'"));
-            }
-            _ => {}
+            Some(url) => match url.parse::<reqwest::Url>() {
+                Err(_) => errors.push(format!("k8s.api_server_url is not a valid URL: '{url}'")),
+                // jwtlet authenticates to the API server with its own SA token as a bearer credential.
+                Ok(parsed) if parsed.scheme() != "https" => {
+                    errors.push(format!("k8s.api_server_url must use https: '{url}'"));
+                }
+                Ok(_) => {}
+            },
         }
 
         if self.k8s.cluster_issuer.is_none() {
@@ -281,6 +286,11 @@ impl JwtletConfig {
         if self.token.token_ttl_secs <= 0 {
             errors.push(format!(
                 "token.token_ttl_secs must be positive, got {}",
+                self.token.token_ttl_secs
+            ));
+        } else if self.token.token_ttl_secs > MAX_TOKEN_TTL_SECS {
+            errors.push(format!(
+                "token.token_ttl_secs must not exceed {MAX_TOKEN_TTL_SECS}, got {}",
                 self.token.token_ttl_secs
             ));
         }

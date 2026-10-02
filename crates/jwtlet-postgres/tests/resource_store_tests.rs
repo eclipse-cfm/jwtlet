@@ -12,7 +12,7 @@
 
 #![allow(clippy::unwrap_used)]
 
-use jwtlet_core::resource::{ResourceMapping, ResourceStore, ScopeMapping};
+use jwtlet_core::resource::{ResourceError, ResourceMapping, ResourceStore, ScopeMapping};
 use jwtlet_postgres::PostgresResourceStore;
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
@@ -329,7 +329,7 @@ async fn save_scope_mappings_persists_all_entries_in_one_transaction() {
 }
 
 #[tokio::test]
-async fn save_scope_mapping_is_upsert() {
+async fn save_scope_mapping_conflict_does_not_overwrite() {
     let (pool, _container) = setup_postgres().await;
     let store = PostgresResourceStore::new(pool);
     store.initialize().await.unwrap();
@@ -339,15 +339,38 @@ async fn save_scope_mapping_is_upsert() {
         .await
         .unwrap();
 
-    // Save again with different claims — should overwrite, not error.
-    store
+    // Creating an existing scope must fail instead of silently replacing its claims.
+    let result = store
         .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("editor"))]))])
-        .await
-        .unwrap();
+        .await;
+    assert!(matches!(result, Err(ResourceError::Conflict(ref s)) if s == "read"));
 
     let all = store.list_scope_mappings().await.unwrap();
     assert_eq!(all.len(), 1);
-    assert_eq!(all[0].claims["role"], json!("editor"));
+    assert_eq!(all[0].claims["role"], json!("viewer"));
+}
+
+#[tokio::test]
+async fn save_scope_mappings_conflict_rolls_back_whole_batch() {
+    let (pool, _container) = setup_postgres().await;
+    let store = PostgresResourceStore::new(pool);
+    store.initialize().await.unwrap();
+
+    store
+        .save_scope_mappings(vec![scope_mapping("read", claims(&[("role", json!("viewer"))]))])
+        .await
+        .unwrap();
+
+    let result = store
+        .save_scope_mappings(vec![
+            scope_mapping("write", claims(&[("role", json!("editor"))])),
+            scope_mapping("read", claims(&[("role", json!("editor"))])),
+        ])
+        .await;
+    assert!(matches!(result, Err(ResourceError::Conflict(_))));
+
+    let all = store.list_scope_mappings().await.unwrap();
+    assert_eq!(all.len(), 1, "write must not be persisted when the batch fails");
 }
 
 #[tokio::test]

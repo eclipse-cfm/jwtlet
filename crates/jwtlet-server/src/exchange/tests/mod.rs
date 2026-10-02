@@ -148,6 +148,30 @@ async fn exchange_token_parses_scope_as_space_separated_list_with_scope_mappings
 }
 
 #[tokio::test]
+async fn exchange_token_returns_normalized_scope() {
+    let service = make_service(
+        ok_verifier(),
+        ok_generator(),
+        mapping_store(mapping(&["read", "write"])),
+    );
+    let response = token_exchange(State(Arc::new(service)), Form(form(Some("  write read\tread "))))
+        .await
+        .into_response();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(json_body(response).await["scope"], "read write");
+}
+
+#[tokio::test]
+async fn exchange_token_omits_scope_when_only_whitespace_requested() {
+    let service = make_service(ok_verifier(), ok_generator(), mapping_store(mapping(&[])));
+    let response = token_exchange(State(Arc::new(service)), Form(form(Some("   "))))
+        .await
+        .into_response();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(json_body(response).await.get("scope").is_none());
+}
+
+#[tokio::test]
 async fn exchange_token_passes_empty_scopes_when_scope_absent() {
     let service = make_service(ok_verifier(), ok_generator(), mapping_store(mapping(&[])));
     let response = token_exchange(State(Arc::new(service)), Form(form(None)))

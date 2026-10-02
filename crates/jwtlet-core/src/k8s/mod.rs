@@ -28,6 +28,11 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 const TOKEN_REVIEW_API: &str = "/apis/authentication.k8s.io/v1/tokenreviews";
+const SERVICE_ACCOUNT_USERNAME_PREFIX: &str = "system:serviceaccount:";
+const SERVICE_ACCOUNTS_GROUP: &str = "system:serviceaccounts";
+
+/// Custom claim carrying the authenticated identity's K8s UID, when the TokenReview returns one.
+pub const K8S_UID_CLAIM: &str = "k8s_uid";
 
 /// Verifies a Kubernetes Service Account JWT using the K8S TokenReview API.
 ///
@@ -52,6 +57,12 @@ pub struct K8sTokenReviewVerifier {
 
     #[builder(default = Client::new())]
     client: Client,
+
+    /// When `true` (the default), only Kubernetes service account identities are accepted.
+    /// Identities from other API server authenticators (OIDC users, static or bootstrap tokens)
+    /// are rejected even when TokenReview reports them as authenticated.
+    #[builder(default = true)]
+    require_service_account: bool,
 
     #[builder(skip)]
     state: Option<Arc<RwLock<SaTokenState>>>,
@@ -184,9 +195,29 @@ impl JwtVerifier for K8sTokenReviewVerifier {
             return Err(VerificationFailed(msg));
         }
 
+        // Authenticators that are not audience-aware may authenticate a token without honoring the
+        // requested audiences; the TokenReview contract requires clients to check the intersection.
+        if !review.status.audiences.iter().any(|a| a == audience) {
+            return Err(VerificationFailed(format!(
+                "TokenReview did not confirm the requested audience '{audience}'"
+            )));
+        }
+
         let user = review.status.user.ok_or_else(|| {
             VerificationFailed("TokenReview returned authenticated=true but no user info".to_string())
         })?;
+
+        if self.require_service_account && !user.is_service_account() {
+            return Err(VerificationFailed(format!(
+                "identity '{}' is not a Kubernetes service account",
+                user.username
+            )));
+        }
+
+        let mut custom = Map::new();
+        if let Some(uid) = user.uid.filter(|u| !u.is_empty()) {
+            custom.insert(K8S_UID_CLAIM.to_string(), uid.into());
+        }
 
         Ok(TokenClaims {
             sub: user.username,
@@ -195,7 +226,7 @@ impl JwtVerifier for K8sTokenReviewVerifier {
             iat: 0,
             exp: 0,
             nbf: None,
-            custom: Map::new(),
+            custom,
         })
     }
 }
@@ -226,9 +257,22 @@ struct TokenReviewStatus {
     user: Option<UserInfo>,
     #[serde(default)]
     error: Option<String>,
+    #[serde(default)]
+    audiences: Vec<String>,
 }
 
 #[derive(Deserialize)]
 struct UserInfo {
     username: String,
+    #[serde(default)]
+    uid: Option<String>,
+    #[serde(default)]
+    groups: Vec<String>,
+}
+
+impl UserInfo {
+    fn is_service_account(&self) -> bool {
+        self.username.starts_with(SERVICE_ACCOUNT_USERNAME_PREFIX)
+            && self.groups.iter().any(|g| g == SERVICE_ACCOUNTS_GROUP)
+    }
 }

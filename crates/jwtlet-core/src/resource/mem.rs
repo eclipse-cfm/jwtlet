@@ -12,7 +12,7 @@
 
 use super::{MappingPair, ResourceError, ResourceMapping, ResourceStore, ScopeMapping};
 use async_trait::async_trait;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tokio::sync::RwLock;
 
 struct InnerStore {
@@ -105,6 +105,12 @@ impl ResourceStore for MemoryResourceStore {
     async fn save_scope_mappings(&self, mappings: Vec<ScopeMapping>) -> Result<(), ResourceError> {
         // Holding the write lock for the whole batch makes the insert atomic.
         let mut store = self.store.write().await;
+        let mut seen = HashSet::new();
+        for mapping in &mappings {
+            if store.scope_mappings.contains_key(&mapping.scope) || !seen.insert(mapping.scope.as_str()) {
+                return Err(ResourceError::Conflict(mapping.scope.clone()));
+            }
+        }
         for mapping in mappings {
             store.scope_mappings.insert(mapping.scope.clone(), mapping);
         }

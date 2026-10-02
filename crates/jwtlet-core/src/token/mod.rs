@@ -13,7 +13,8 @@
 #[cfg(test)]
 mod tests;
 
-use crate::resource::{ResourceError, ResourceService};
+use crate::k8s::K8S_UID_CLAIM;
+use crate::resource::{ResourceError, ResourceService, is_reserved_claim};
 use bon::Builder;
 use chrono::Utc;
 use dsdk_facet_core::context::ParticipantContext;
@@ -21,6 +22,11 @@ use dsdk_facet_core::jwt::{JwtGenerationError, JwtGenerator, JwtVerificationErro
 use serde_json::json;
 use std::collections::HashSet;
 use thiserror::Error;
+use tracing::warn;
+use uuid::Uuid;
+
+/// Upper bound for `token_ttl_secs`.
+pub const MAX_TOKEN_TTL_SECS: i64 = 86_400;
 
 #[derive(Builder)]
 pub struct TokenExchangeService {
@@ -70,15 +76,28 @@ impl TokenExchangeService {
 
         let aud = resolve_audience(audience, &verification.audiences, &self.audience)?;
 
+        // Reserved keys are rejected when scope mappings are written, but the store may have been
+        // populated by other means. Filter again here: `custom` is flattened into the payload, so
+        // a leaked `sub` or `aud` would produce a duplicate key that most parsers resolve to the
+        // attacker-controlled value.
         let mut custom = serde_json::Map::new();
-        custom.extend(verification.claims.into_iter().map(|(k, v)| (k, v)));
-        custom.insert(
-            "act".to_string(),
-            json!({
-                "sub": client_claims.sub,
-                "iss": client_claims.iss,
-            }),
-        );
+        for (k, v) in verification.claims {
+            if is_reserved_claim(&k) {
+                warn!(claim = %k, participant_context, "dropping reserved claim from scope mapping");
+                continue;
+            }
+            custom.insert(k, v);
+        }
+
+        let mut act = json!({
+            "sub": client_claims.sub,
+            "iss": client_claims.iss,
+        });
+        if let Some(uid) = client_claims.custom.get(K8S_UID_CLAIM) {
+            act[K8S_UID_CLAIM] = uid.clone();
+        }
+        custom.insert("act".to_string(), act);
+        custom.insert("jti".to_string(), Uuid::new_v4().to_string().into());
 
         let now = Utc::now().timestamp();
         let participant_claims = TokenClaims::builder()

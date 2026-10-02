@@ -26,6 +26,7 @@ opentelemetry_sdk = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 opentelemetry-http = { workspace = true }
 tracing-opentelemetry = { workspace = true }
+uuid = { workspace = true }
 dsdk-facet-core = { workspace = true }
 dsdk-facet-postgres = { workspace = true }
 dsdk-facet-hashicorp-vault = { workspace = true }

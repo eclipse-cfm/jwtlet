@@ -5,6 +5,9 @@ resource/scope mapping model — not a code audit. It asks: is the conceptual
 model sound, and where does it break regardless of how correctly the code is
 written?
 
+For the code-level review of how the implementation enforces this model, see
+[security-assessment.md](security-assessment.md).
+
 ---
 
 ## Model Summary
