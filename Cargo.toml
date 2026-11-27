@@ -46,7 +46,7 @@ anyhow = "1"
 config = "0.15"
 humantime-serde = "1"
 
-rstest = "0.27"
+rstest = "0.29"
 wiremock = "0.6"
 tokio-test = "0.4"
 tracing-test = "0.2"
