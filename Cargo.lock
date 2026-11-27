@@ -1592,7 +1592,7 @@ dependencies = [
  "hex",
  "hmac 0.13.0",
  "http 1.5.0",
- "jsonwebtoken",
+ "jsonwebtoken 11.1.0",
  "log",
  "pingora",
  "pkcs8 0.10.2",
@@ -1624,7 +1624,7 @@ dependencies = [
  "hex",
  "hmac 0.13.0",
  "http 1.5.0",
- "jsonwebtoken",
+ "jsonwebtoken 11.1.0",
  "log",
  "pingora",
  "pkcs8 0.10.2",
@@ -1652,7 +1652,7 @@ dependencies = [
  "dsdk-facet-core 0.1.1 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1)",
  "dsdk-facet-hashicorp-vault 0.1.1 (git+https://github.com/eclipse-dataplane-core/dsdk-facet-rs?tag=dsdk-facet-core-v0.1.1)",
  "dsdk-facet-testcontainers",
- "jsonwebtoken",
+ "jsonwebtoken 11.1.0",
  "reqwest 0.12.28",
  "serde_json",
  "tokio",
@@ -3039,13 +3039,30 @@ dependencies = [
  "js-sys",
  "p256 0.13.2",
  "p384",
- "pem",
+ "pem 3.0.6",
  "rand 0.8.8",
  "rsa",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "signature 2.2.0",
+ "simple_asn1",
+ "zeroize",
+]
+
+[[package]]
+name = "jsonwebtoken"
+version = "12.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f347a975eb5fa8f5c4eadce6c1152c11c326cf32cf839fb64ff12d5cb8f4ce8b"
+dependencies = [
+ "base64 0.23.1",
+ "getrandom 0.4.3",
+ "js-sys",
+ "pem 4.0.0",
+ "serde",
+ "serde_json",
+ "signature 3.0.0",
  "simple_asn1",
  "zeroize",
 ]
@@ -3077,7 +3094,7 @@ dependencies = [
  "dsdk-facet-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "dsdk-facet-e2e-tests",
  "dsdk-facet-hashicorp-vault 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "jsonwebtoken",
+ "jsonwebtoken 12.0.0",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -3788,6 +3805,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d30c53c26bc5b31a98cd02d20f25a7c8567146caf63ed593a9d87b2775291be"
 dependencies = [
  "base64 0.22.1",
+ "serde_core",
+]
+
+[[package]]
+name = "pem"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d354a98a3d1251555de99e8fdd8afda05573c31b82f59063a7b0a29b5527f120"
+dependencies = [
+ "base64 0.23.1",
  "serde_core",
 ]
 
